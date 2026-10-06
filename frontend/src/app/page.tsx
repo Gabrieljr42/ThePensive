@@ -1,5 +1,12 @@
-import { ArchiveEntrance } from "@/components/archive/archive-entrance";
+import { MidnightArchive } from "@/features/archive/MidnightArchive";
 
-export default function Home() {
-  return <ArchiveEntrance />;
+interface PageProps {
+  searchParams?: Promise<{ at?: string }>;
+}
+
+export default async function Home({ searchParams }: PageProps) {
+  const resolved = searchParams ? await searchParams : {};
+  const initialPhase = resolved?.at === "desk" ? "desk" : "dark";
+
+  return <MidnightArchive initialPhase={initialPhase} />;
 }
