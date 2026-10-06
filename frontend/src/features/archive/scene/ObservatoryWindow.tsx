@@ -3,11 +3,16 @@
 import { useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
+import { useArchiveStore } from "../store";
+import { NoisyStandardMaterial } from "./NoisyStandardMaterial";
+import { moonLocal } from "./sceneLayout";
 
 export function ObservatoryWindow() {
   const cloudsRef = useRef<THREE.Group | null>(null);
 
   useFrame((_, delta) => {
+    const { reducedMotion, qualityTier } = useArchiveStore.getState();
+    if (reducedMotion || qualityTier === "low") return;
     if (cloudsRef.current) {
       cloudsRef.current.position.x += delta * 0.015;
       if (cloudsRef.current.position.x > 3.0) {
@@ -24,20 +29,18 @@ export function ObservatoryWindow() {
         <meshBasicMaterial color="#020407" />
       </mesh>
 
-      {/* The Moon Disc */}
-      <mesh position={[1.1, 1.4, -2.2]}>
-        <circleGeometry args={[0.95, 32]} />
-        <meshBasicMaterial color="#eaf4f8" />
-      </mesh>
-
-      {/* Moon Halo */}
-      <mesh position={[1.1, 1.4, -2.25]}>
-        <circleGeometry args={[2.2, 32]} />
-        <meshBasicMaterial
-          color="#9cc5d8"
-          transparent
-          opacity={0.18}
-          blending={THREE.AdditiveBlending}
+      <mesh position={[moonLocal.x, moonLocal.y, moonLocal.z]} scale={[1, 0.94, 1]}>
+        <circleGeometry args={[0.82, 28]} />
+        <NoisyStandardMaterial
+          color="#c9d3d4"
+          roughness={0.96}
+          metalness={0}
+          repeat={[2.2, 2.2]}
+          offset={[0.48, 0.22]}
+          strength={0.34}
+          emissive="#d5e2e4"
+          emissiveIntensity={0.55}
+          bump={false}
         />
       </mesh>
 

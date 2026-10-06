@@ -10,10 +10,13 @@ export function PageBloom() {
   const count = 18;
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
+  const appliedBloom = useRef<number | null>(null);
 
   useFrame(() => {
     if (!instancedRef.current) return;
     const bloom = sceneUniforms.retrieval.pageBloom;
+    if (appliedBloom.current === bloom) return;
+    appliedBloom.current = bloom;
 
     for (let i = 0; i < count; i++) {
       const angle = (i / (count - 1) - 0.5) * 1.1 * bloom;

@@ -48,7 +48,7 @@ export function MethodAstrolabe() {
               onClick={() => setMode(m.id)}
               className={`group relative flex items-center gap-2 px-3.5 sm:px-5 py-2 rounded-xs font-mono text-xs tracking-wider transition-all duration-200 ${
                 isSelected
-                  ? "bg-gradient-to-r from-[#211a12] via-[#2a2115] to-[#211a12] text-[#f7e6b8] border border-[#d4af37]/80 shadow-[0_0_16px_rgba(212,175,55,0.2)]"
+                  ? "bg-[#241c14] text-[#f3ead8] border border-[#8d7348]"
                   : "text-[#8d9aa6] hover:text-[#e0d6c3] hover:bg-[#151c27]/60 border border-transparent"
               }`}
             >
@@ -60,11 +60,6 @@ export function MethodAstrolabe() {
                 {m.icon}
               </span>
               <span className="font-semibold">{m.label}</span>
-
-              {/* Bottom fine brass filigree when selected */}
-              {isSelected && (
-                <span className="absolute bottom-0 left-2 right-2 h-[1px] bg-gradient-to-r from-transparent via-[#ffd875] to-transparent" />
-              )}
             </button>
           );
         })}

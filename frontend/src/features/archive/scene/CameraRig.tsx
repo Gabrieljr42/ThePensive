@@ -10,9 +10,18 @@ import { useArchiveStore } from "../store";
 export function CameraRig() {
   const { camera } = useThree();
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
-  const lookTarget = useRef(new THREE.Vector3(0, 1.2, 0));
-  const currentPos = useRef(new THREE.Vector3(0, 1.8, 7.2));
+  const lookTarget = useRef(
+    new THREE.Vector3(
+      sceneUniforms.camera.targetX,
+      sceneUniforms.camera.targetY,
+      sceneUniforms.camera.targetZ,
+    ),
+  );
+  const currentPos = useRef(
+    new THREE.Vector3(sceneUniforms.camera.x, sceneUniforms.camera.y, sceneUniforms.camera.z),
+  );
   const reducedMotion = useArchiveStore((s) => s.reducedMotion);
+  const tier = useArchiveStore((s) => s.qualityTier);
 
   useEffect(() => {
     globalCameraRef.current = camera;
@@ -30,7 +39,20 @@ export function CameraRig() {
   }, [camera, reducedMotion]);
 
   useFrame((_, delta) => {
-    // Parallax damping
+    if (reducedMotion || tier === "low") {
+      camera.position.set(
+        sceneUniforms.camera.x,
+        sceneUniforms.camera.y,
+        sceneUniforms.camera.z,
+      );
+      camera.lookAt(
+        sceneUniforms.camera.targetX,
+        sceneUniforms.camera.targetY,
+        sceneUniforms.camera.targetZ,
+      );
+      return;
+    }
+
     const m = mouseRef.current;
     m.x += (m.targetX - m.x) * Math.min(delta * 4, 1);
     m.y += (m.targetY - m.y) * Math.min(delta * 4, 1);

@@ -79,7 +79,7 @@ Docker Compose configuration was validated, but the local Docker engine returned
 - [Desktop reading room screenshot](docs/screenshots/ask-desktop.png)
 - [Source chamber screenshot](docs/screenshots/evidence-desktop.png)
 
-Reduced motion, keyboard navigation, visible focus, mobile tabs/stacking, native dialog behavior, and quiet reading are part of the interface. No sound plays automatically. New desk and paper assets use optimized WebP; responsive architecture images, CSS/SVG, and Motion supply depth without a large WebGL dependency.
+Reduced motion, keyboard navigation, visible focus, mobile tabs/stacking, native dialog behavior, and quiet reading are part of the interface. No sound plays automatically. The Midnight Archive aisle is a WebGL scene that starts on a conservative pixel-ratio, shadow, and particle budget until a desktop GPU tier is known; the research desk stays in the DOM.
 
 ## Read the plan
 

@@ -3,6 +3,14 @@ import type { EvidenceResponse, Mode } from "@/lib/contracts";
 import type { ArchiveRun, ScenePhase, Volume } from "./model";
 import { ARCHIVE_VOLUMES } from "./mock/volumes";
 import { MARAUDERS_MAP_QUESTION, MARAUDERS_MAP_RUN } from "./mock/marauders-map";
+import {
+  createArchiveQualityState,
+  noteDetectedTier,
+  noteReducedMotion,
+  noteSceneMounted,
+  type ArchiveQualityState,
+  type ArchiveTier,
+} from "./archiveBudget";
 
 interface ArchiveState {
   phase: ScenePhase;
@@ -17,7 +25,8 @@ interface ArchiveState {
   pinnedCitationId: string | null;
   activeEvidence: EvidenceResponse | null;
   reducedMotion: boolean;
-  qualityTier: "high" | "mid" | "low";
+  qualityTier: ArchiveTier;
+  qualityGate: ArchiveQualityState;
   isBusy: boolean;
 
   // Actions
@@ -32,7 +41,8 @@ interface ArchiveState {
   setPinnedCitation: (id: string | null) => void;
   setActiveEvidence: (evidence: EvidenceResponse | null) => void;
   setReducedMotion: (reduced: boolean) => void;
-  setQualityTier: (tier: "high" | "mid" | "low") => void;
+  setQualityTier: (tier: ArchiveTier) => void;
+  markSceneMounted: () => void;
   setIsBusy: (busy: boolean) => void;
   resetToDesk: () => void;
 }
@@ -50,7 +60,8 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
   pinnedCitationId: null,
   activeEvidence: null,
   reducedMotion: false,
-  qualityTier: "high",
+  qualityTier: "mid",
+  qualityGate: createArchiveQualityState(),
   isBusy: false,
 
   setPhase: (phase) => set({ phase }),
@@ -86,9 +97,44 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
 
   setActiveEvidence: (activeEvidence) => set({ activeEvidence }),
 
-  setReducedMotion: (reducedMotion) => set({ reducedMotion }),
+  setReducedMotion: (reducedMotion) =>
+    set((state) => {
+      const qualityGate = noteReducedMotion(state.qualityGate, reducedMotion);
+      if (
+        reducedMotion === state.reducedMotion &&
+        qualityGate.tier === state.qualityTier &&
+        qualityGate.pendingHigh === state.qualityGate.pendingHigh
+      ) {
+        return state;
+      }
+      return { reducedMotion, qualityGate, qualityTier: qualityGate.tier };
+    }),
 
-  setQualityTier: (qualityTier) => set({ qualityTier }),
+  setQualityTier: (detected) =>
+    set((state) => {
+      const qualityGate = noteDetectedTier(state.qualityGate, detected);
+      if (
+        qualityGate.tier === state.qualityTier &&
+        qualityGate.pendingHigh === state.qualityGate.pendingHigh
+      ) {
+        return state;
+      }
+      return { qualityGate, qualityTier: qualityGate.tier };
+    }),
+
+  markSceneMounted: () =>
+    set((state) => {
+      const qualityGate = noteSceneMounted(state.qualityGate);
+      if (qualityGate === state.qualityGate) return state;
+      if (
+        qualityGate.mounted === state.qualityGate.mounted &&
+        qualityGate.tier === state.qualityTier &&
+        qualityGate.pendingHigh === state.qualityGate.pendingHigh
+      ) {
+        return state;
+      }
+      return { qualityGate, qualityTier: qualityGate.tier };
+    }),
 
   setIsBusy: (isBusy) => set({ isBusy }),
 

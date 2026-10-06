@@ -24,7 +24,7 @@ The original indigo, parchment, brass, and moonlight palette gains Deep Archive,
 
 Cormorant Garamond supplies the identity and display titles. Source Serif 4 supplies comfortable manuscript reading. Source Sans 3 supplies exact controls, metadata, and measurements. All font files are locally bundled.
 
-Paper fibers, book cloth, engraved geometry, page edges, and wood establish material depth. Decorative symbols are original and restrained. The room uses layered images and CSS/SVG/Motion rather than a large WebGL dependency.
+Paper fibers, book cloth, engraved geometry, page edges, and wood establish material depth. Decorative symbols are original and restrained. The aisle is a tier-scaled WebGL scene (stacks, desk, candle, and moonbeam) with procedural noise; the research desk stays in the DOM.
 
 ## Accessibility and performance
 

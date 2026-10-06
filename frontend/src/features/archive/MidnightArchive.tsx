@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useArchiveStore } from "./store";
 import { archiveDirector } from "./director";
@@ -26,29 +26,42 @@ interface MidnightArchiveProps {
 
 export function MidnightArchive({ initialPhase = "dark" }: MidnightArchiveProps) {
   const phase = useArchiveStore((s) => s.phase);
-  const setPhase = useArchiveStore((s) => s.setPhase);
   const setQualityTier = useArchiveStore((s) => s.setQualityTier);
   const setReducedMotion = useArchiveStore((s) => s.setReducedMotion);
+  const [sceneReady, setSceneReady] = useState(false);
 
   useEffect(() => {
-    // Detect quality tier and reduced motion
-    detectArchiveQualityTier().then(setQualityTier);
-
+    let cancelled = false;
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReducedMotion(mediaQuery.matches);
 
-    const handleMotionChange = (e: MediaQueryListEvent) => {
-      setReducedMotion(e.matches);
+    const handleMotionChange = (event: MediaQueryListEvent) => {
+      setReducedMotion(event.matches);
+      if (event.matches) setQualityTier("low");
     };
     mediaQuery.addEventListener("change", handleMotionChange);
 
-    // Deep link directly to desk if requested
+    detectArchiveQualityTier().then((tier) => {
+      if (!cancelled) setQualityTier(tier);
+    });
+
+    const mountScene = () => {
+      if (!cancelled) setSceneReady(true);
+    };
+    const idleId = window.requestIdleCallback?.(mountScene, { timeout: 160 });
+    const timerId = idleId === undefined ? window.setTimeout(mountScene, 0) : undefined;
+
     if (initialPhase === "desk") {
       archiveDirector.jumpToDesk();
     }
 
-    return () => mediaQuery.removeEventListener("change", handleMotionChange);
-  }, [initialPhase, setPhase, setQualityTier, setReducedMotion]);
+    return () => {
+      cancelled = true;
+      mediaQuery.removeEventListener("change", handleMotionChange);
+      if (idleId !== undefined) window.cancelIdleCallback(idleId);
+      if (timerId !== undefined) window.clearTimeout(timerId);
+    };
+  }, [initialPhase, setQualityTier, setReducedMotion]);
 
   const atDesk = phase !== "dark" && phase !== "threshold" && phase !== "approaching";
 
@@ -66,14 +79,9 @@ export function MidnightArchive({ initialPhase = "dark" }: MidnightArchiveProps)
         Skip directly to Research Desk
       </a>
 
-      {/* Procedural 3D Environment Layer */}
-      <ArchiveCanvas />
+      {sceneReady ? <ArchiveCanvas /> : null}
 
-      {/* Luminous Provenance Thread Layer */}
       <ThreadLayer />
-
-      {/* Procedural Film Grain Texture */}
-      <div className="film-grain-overlay" aria-hidden="true" />
 
       {/* Threshold / Entrance Title Card */}
       <ThresholdTitle />
@@ -88,9 +96,15 @@ export function MidnightArchive({ initialPhase = "dark" }: MidnightArchiveProps)
         {/* Top Archival Header Bar */}
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#a88235]/25 pb-4 mb-6">
           <div className="flex items-center gap-3">
-            <span className="font-display text-2xl tracking-tight text-[#faecd5]">
-              Pensieve
-            </span>
+            {atDesk ? (
+              <h1 className="font-display text-2xl tracking-tight text-[#faecd5]">
+                Pensieve
+              </h1>
+            ) : (
+              <span className="font-display text-2xl tracking-tight text-[#faecd5]">
+                Pensieve
+              </span>
+            )}
             <span className="font-reading italic text-sm text-[#c4b18c]">
               The Midnight Archive
             </span>

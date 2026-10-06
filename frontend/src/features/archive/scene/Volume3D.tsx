@@ -6,6 +6,7 @@ import { useFrame } from "@react-three/fiber";
 import type { Volume } from "../model";
 import { useArchiveStore } from "../store";
 import { anchorRegistry } from "../threads/anchors";
+import { NoisyStandardMaterial } from "./NoisyStandardMaterial";
 
 interface Volume3DProps {
   volume: Volume;
@@ -109,12 +110,15 @@ export function Volume3D({ volume, index }: Volume3DProps) {
       }}
     >
       {/* Leather Book Body */}
-      <mesh ref={meshRef} castShadow receiveShadow>
+      <mesh ref={meshRef} castShadow={false} receiveShadow>
         <boxGeometry args={[bookWidth, bookHeight, bookDepth]} />
-        <meshStandardMaterial
+        <NoisyStandardMaterial
           color={volume.leatherHex}
-          roughness={0.52}
-          metalness={0.25}
+          roughness={0.58}
+          metalness={0.12}
+          repeat={[2.2, 3.4]}
+          strength={0.36}
+          bump={false}
           emissive={isSelected ? volume.giltHex : "#000000"}
           emissiveIntensity={isSelected ? 0.28 : isHovered ? 0.14 : 0}
         />
@@ -125,34 +129,37 @@ export function Volume3D({ volume, index }: Volume3DProps) {
         <boxGeometry args={[bookWidth * 0.92, 0.008, 0.006]} />
         <meshStandardMaterial
           color={volume.giltHex}
-          metalness={0.85}
-          roughness={0.3}
+          metalness={0.32}
+          roughness={0.58}
         />
       </mesh>
       <mesh position={[0, -bookHeight * 0.28, bookDepth * 0.505]}>
         <boxGeometry args={[bookWidth * 0.92, 0.008, 0.006]} />
         <meshStandardMaterial
           color={volume.giltHex}
-          metalness={0.85}
-          roughness={0.3}
+          metalness={0.32}
+          roughness={0.58}
         />
       </mesh>
       <mesh position={[0, 0, bookDepth * 0.505]}>
         <boxGeometry args={[bookWidth * 0.92, 0.008, 0.006]} />
         <meshStandardMaterial
           color={volume.giltHex}
-          metalness={0.85}
-          roughness={0.3}
+          metalness={0.32}
+          roughness={0.58}
         />
       </mesh>
 
       {/* Pages Block on side & top */}
       <mesh position={[0, 0, -0.01]}>
         <boxGeometry args={[bookWidth * 0.88, bookHeight * 0.94, bookDepth * 0.92]} />
-        <meshStandardMaterial
-          color="#ebdcb9"
-          roughness={0.8}
-          metalness={0.05}
+        <NoisyStandardMaterial
+          color="#ead7ae"
+          roughness={0.84}
+          metalness={0.02}
+          repeat={[3, 6]}
+          strength={0.22}
+          bump={false}
         />
       </mesh>
     </group>
