@@ -32,9 +32,9 @@ export function AnswerTome({
   const complete = branch.status === "complete";
   return (
     <motion.article
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
+      initial={{ opacity: 0, y: 20, rotateY: rag ? -6 : 6, rotateX: 2 }}
+      animate={{ opacity: 1, y: 0, rotateY: 0, rotateX: 0 }}
+      transition={{ duration: 0.6, ease: [0.2, 0.7, 0.2, 1] }}
       className={`answer-tome ${rag ? "tome-brass" : "tome-moonlight"}`}
       aria-labelledby={`${branch.id}-heading`}
       aria-busy={
@@ -76,8 +76,11 @@ export function AnswerTome({
             <p className="answer-introduction">{branch.introduction}</p>
             <div className="answer-claims">
               {branch.claims.map((claim, index) => (
-                <p
+                <motion.p
                   key={claim.id}
+                  initial={{ opacity: 0, y: 3 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.38, delay: index * 0.07 }}
                   className={`answer-claim ${claim.citations.some((citation) => citation.id === activeCitation) ? "claim-illuminated" : ""}`}
                 >
                   <span className="claim-index" aria-hidden="true">
@@ -107,7 +110,7 @@ export function AnswerTome({
                       </button>
                     );
                   })}
-                </p>
+                </motion.p>
               ))}
             </div>
             <p className="answer-conclusion">{branch.conclusion}</p>

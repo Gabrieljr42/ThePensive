@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0",
-    "build": "next build",
-    "start": "next start --hostname 0.0.0.0",
+    "build": "next build --webpack",
+    "start": "node scripts/start-production.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "contracts": "openapi-typescript ../contracts/openapi.json -o src/lib/generated/api.ts",
@@ -14,6 +14,7 @@
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.2.0",
     "@fontsource/source-sans-3": "^5.2.0",
+    "@fontsource/source-serif-4": "^5.3.0",
     "motion": "14.0.0",
     "next": "16.3.8",
     "react": "^19.2.0",

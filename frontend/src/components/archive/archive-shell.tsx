@@ -1,47 +1,41 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MotionConfig } from "motion/react";
 import { ArchiveMark, Icon } from "../icon";
+import type { Mode } from "@/lib/contracts";
+import { ArchiveEnvironment, type ScenePhase } from "./archive-environment";
 
 export function ArchiveShell({
   children,
   quiet = true,
   onQuietChange,
+  mode = "compare",
+  phase = "idle",
 }: {
   children: React.ReactNode;
   quiet?: boolean;
   onQuietChange?: () => void;
+  mode?: Mode;
+  phase?: ScenePhase;
 }) {
   const pathname = usePathname();
   return (
     <MotionConfig reducedMotion="user">
-      <div className={`archive-world ${quiet ? "quiet-reading" : ""}`}>
+      <div
+        className={`archive-world immersive-world ${quiet ? "quiet-reading" : ""}`}
+        data-lighting={mode}
+        data-phase={phase}
+      >
         <a className="skip-link" href="#main">
           Skip to the reading room
         </a>
-        <div className="archive-environment" aria-hidden="true">
-          <Image
-            src="/art/midnight-archive.png"
-            alt=""
-            fill
-            preload
-            sizes="100vw"
-            quality={85}
-          />
-          <div className="scene-shade" />
-        </div>
-        <div className="archive-dust" aria-hidden="true">
-          {Array.from({ length: 9 }, (_, i) => (
-            <i key={i} style={{ "--dust-index": i } as React.CSSProperties} />
-          ))}
-        </div>
+        <ArchiveEnvironment quiet={quiet} mode={mode} phase={phase} />
         <header className="archive-header">
           <Link
             className="wordmark"
-            href="/ask"
+            href="/"
             aria-label="Pensieve, the Midnight Archive"
           >
             <ArchiveMark />

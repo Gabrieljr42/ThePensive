@@ -4,20 +4,21 @@
 
 Build a source-grounded literary question-answering application that compares RAG and Full Context under a shared, inspectable experiment configuration. The initial deployment is a small portfolio application maintained by one developer. Source reliability and a compelling reading experience take priority over infrastructure breadth.
 
-This is a proposed architecture. There is currently no application, ingested Harry Potter corpus, live provider integration, or measured benchmark in this folder.
+The first slice implements Next.js rendering, separate FastAPI contracts and experiment services, exact source matching, and demonstration runs. PostgreSQL stores snapshots in Compose. Retrieval, generation, timing, and usage are mocked; Harry Potter ingestion, live providers, and measured benchmarks remain later milestones.
 
 ## Suggested stack
 
 | Concern | Initial choice | Reason and trade-off |
 | --- | --- | --- |
-| Application | Next.js App Router + TypeScript | One project for the public site, reading interface, and server endpoints; deployment must support streaming and the expected request duration |
+| Frontend | Next.js App Router + TypeScript | Reading and interaction, with a thin same-origin transport to FastAPI |
+| Backend | FastAPI + Python | Source, AI, citation, experiment, and evaluation responsibilities have a separate modular application boundary |
 | Styling | Tailwind CSS + CSS custom properties | Shared theme tokens with deliberate component styling; custom artwork and reading composition carry the identity |
 | Animation | Motion + CSS/SVG | Focused reveals and evidence transitions with reduced-motion support; continuous ambiance stays lightweight |
 | Relational and vector storage | PostgreSQL + pgvector | Source records, run records, lexical search, and vector search in one database; explicit SQL makes retrieval inspectable |
-| Data access | A small SQL module using a PostgreSQL client | Easy to see query behavior and source filtering; add a lightweight ORM only if migrations and relational editing justify it |
+| Data access | psycopg with explicit SQL | A JSONB snapshot store for the first slice; source/retrieval migrations follow with ingestion |
 | Generation | OpenAI Responses API behind a narrow provider adapter | Streamed answers and reported usage; adapters must explicitly declare capabilities rather than assume compatibility |
 | Embeddings | Configurable provider/model/dimension | Freeze embedding configuration with the corpus version; re-embed when it changes |
-| Ingestion | Offline CLI using a page-preserving extractor | Parsing and embeddings happen outside request handlers; an optional Python extractor can be added if PDF quality requires it |
+| Ingestion | Offline Python modules and CLI | Page extraction, semantic chunking, embeddings, and source mapping belong to the backend |
 | Evaluation | Offline CLI plus stored run manifests | Reproducible and independent of browser sessions or request-duration limits |
 | Original files | Local private storage initially; private object storage later | Durable provenance without putting entire source files into browser bundles |
 | Verification | Focused unit/integration checks and Playwright journeys | Prove source mapping, fair context assembly, streaming behavior, and accessible interactions |
@@ -26,7 +27,7 @@ Next.js Route Handlers support request/response endpoints and streaming through 
 
 pgvector can be combined with PostgreSQL full-text search and rank fusion. Start with exact vector search for the small pilot corpus; add approximate indexing after measuring query performance and recall. See [pgvector's retrieval documentation](https://github.com/pgvector/pgvector#hybrid-search).
 
-The runtime is a modular application with an offline processing path. A dedicated FastAPI service or background queue becomes useful when Python parsing, long-running uploads, or concurrent ingestion creates a concrete requirement. The current scope does not require that additional service boundary.
+The runtime is a Next.js frontend, modular FastAPI backend, and PostgreSQL/pgvector database, runnable through Docker Compose. Next.js routes forward HTTP requests and do not retrieve documents, construct prompts, or generate answers. The mock slice creates run snapshots and polls independent branch states. A worker or event stream can be introduced when real ingestion and generation require it, preserving the run/claim/citation rendering contract.
 
 ## System overview
 
@@ -38,7 +39,7 @@ flowchart TD
   Chunks --> Embed[Embedding generation]
   Embed --> DB[(PostgreSQL and pgvector)]
   Sources --> DB
-  UI[Question and shared scope] --> API[Run endpoint and frozen configuration]
+  UI[Next.js question and shared scope] --> API[FastAPI run endpoint and frozen configuration]
   API --> RAG[Scoped hybrid retrieval]
   API --> Full[Complete selected-source assembly]
   DB --> RAG

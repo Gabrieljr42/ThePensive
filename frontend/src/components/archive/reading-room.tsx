@@ -11,12 +11,19 @@ import { ComparisonSummary } from "../metrics/comparison-summary";
 import { EvidenceShelf } from "../evidence/evidence-shelf";
 import { EvidenceThread } from "../evidence/evidence-thread";
 import { EvidenceDrawer } from "../evidence/evidence-drawer";
+import { CorpusVolumes } from "./corpus-volumes";
+import { ExperimentInstrument } from "./experiment-instrument";
+import { RetrievalRitual } from "./retrieval-ritual";
+import type { SourceOrigin } from "../evidence/source-connection";
+import { EvidenceConstellation } from "../evidence/evidence-constellation";
 
 export function ReadingRoom() {
   const archive = useArchiveRun();
   const [quietOverride, setQuietOverride] = useState<boolean | null>(null);
   const [trace, setTrace] = useState<EvidenceSelection | null>(null);
   const [selection, setSelection] = useState<EvidenceSelection | null>(null);
+  const [sourceOrigin, setSourceOrigin] = useState<SourceOrigin | null>(null);
+  const [constellation, setConstellation] = useState(false);
   const active = selection ?? trace;
   const reading =
     quietOverride ??
@@ -27,6 +34,19 @@ export function ReadingRoom() {
     setTrace(null);
   }
   function openEvidence(value: EvidenceSelection) {
+    const citation = document.querySelector(
+      `[data-citation-id="${CSS.escape(value.citation.id)}"]`,
+    );
+    const source = document.querySelector(
+      `[data-source-id="${CSS.escape(value.source.id)}"]`,
+    );
+    const node = citation?.getBoundingClientRect().width ? citation : source;
+    const rect = node?.getBoundingClientRect();
+    setSourceOrigin(
+      rect
+        ? { x: rect.x + rect.width * 0.5, y: rect.y + rect.height * 0.5 }
+        : null,
+    );
     setSelection(value);
     setTrace(value);
   }
@@ -34,6 +54,16 @@ export function ReadingRoom() {
     <ArchiveShell
       quiet={reading}
       onQuietChange={() => setQuietOverride(!reading)}
+      mode={archive.mode}
+      phase={
+        selection
+          ? "evidence"
+          : archive.busy
+            ? "searching"
+            : archive.error
+              ? "error"
+              : "idle"
+      }
     >
       <main id="main" className="reading-room">
         <section
@@ -42,12 +72,11 @@ export function ReadingRoom() {
         >
           <div>
             <p className="eyebrow">
-              <span /> A QUIET PLACE FOR CURIOUS MINDS
+              <span /> THE ARCHIVE DESK
             </p>
             <h1 id="archive-title">
               Ask the story.
-              <br />
-              <em>Follow the evidence.</em>
+              <br /> <em>Follow the evidence.</em>
             </h1>
             <p className="hero-description">
               One question. Two ways into the books.
@@ -73,29 +102,46 @@ export function ReadingRoom() {
             <p>Knowledge leaves a light.</p>
           </div>
         </section>
-        <QuestionComposer
-          question={archive.question}
-          onQuestionChange={archive.setQuestion}
-          mode={archive.mode}
-          onModeChange={(mode) => {
-            clearEvidence();
-            archive.changeMode(mode);
-          }}
-          corpora={archive.corpora}
-          corpusId={archive.corpusId}
-          onCorpusChange={(id) => {
-            clearEvidence();
-            archive.changeCorpus(id);
-          }}
-          onSubmit={() => {
-            clearEvidence();
-            void archive.submit();
-          }}
-          onCancel={() => void archive.cancel()}
-          busy={archive.busy}
-          loading={archive.loading}
-          isDemo={archive.run?.data_mode !== "live"}
-        />
+        <div className="desk-workspace">
+          <CorpusVolumes
+            corpora={archive.corpora}
+            selectedId={archive.corpusId}
+            disabled={archive.busy || archive.loading}
+            searching={archive.busy}
+            onSelect={(id) => {
+              clearEvidence();
+              archive.changeCorpus(id);
+            }}
+          />
+          <QuestionComposer
+            question={archive.question}
+            onQuestionChange={archive.setQuestion}
+            mode={archive.mode}
+            onModeChange={(mode) => {
+              clearEvidence();
+              archive.changeMode(mode);
+            }}
+            corpora={archive.corpora}
+            corpusId={archive.corpusId}
+            onCorpusChange={(id) => {
+              clearEvidence();
+              archive.changeCorpus(id);
+            }}
+            onSubmit={() => {
+              clearEvidence();
+              void archive.submit();
+            }}
+            onCancel={() => void archive.cancel()}
+            busy={archive.busy}
+            loading={archive.loading}
+            isDemo={archive.run?.data_mode !== "live"}
+          />
+          <ExperimentInstrument
+            run={archive.run}
+            mode={archive.mode}
+            busy={archive.busy}
+          />
+        </div>
         {archive.error && (
           <div
             className="archive-error"
@@ -117,6 +163,9 @@ export function ReadingRoom() {
               Try again <Icon name="arrow" />
             </button>
           </div>
+        )}
+        {archive.busy && archive.run && (
+          <RetrievalRitual run={archive.run} mode={archive.mode} />
         )}
         <section className="reading-results" aria-labelledby="tomes-heading">
           <div className="results-heading">
@@ -215,15 +264,40 @@ export function ReadingRoom() {
             </div>
           )}
         </section>
-        {archive.run && (
-          <EvidenceShelf
-            run={archive.run}
-            mode={archive.mode}
-            activeSource={active?.source.id ?? null}
-            onOpen={openEvidence}
-            onTrace={setTrace}
-          />
+        {archive.run?.branches.some((branch) => branch.claims.length > 0) && (
+          <div className="evidence-view-switch">
+            <span className="eyebrow">FOLLOW THE CONNECTIONS</span>
+            <button
+              aria-pressed={constellation}
+              onClick={() => {
+                setTrace(null);
+                setConstellation(!constellation);
+              }}
+            >
+              <Icon name={constellation ? "leaf" : "spark"} />
+              {constellation
+                ? "Read the source leaves"
+                : "Explore the constellation"}
+            </button>
+          </div>
         )}
+        {archive.run &&
+          (constellation ? (
+            <EvidenceConstellation
+              run={archive.run}
+              mode={archive.mode}
+              onOpen={openEvidence}
+              onTrace={setTrace}
+            />
+          ) : (
+            <EvidenceShelf
+              run={archive.run}
+              mode={archive.mode}
+              activeSource={active?.source.id ?? null}
+              onOpen={openEvidence}
+              onTrace={setTrace}
+            />
+          ))}
         <div className="archive-provenance">
           <Icon name="leaf" />
           <p>
@@ -242,6 +316,7 @@ export function ReadingRoom() {
           key={selection.citation.id}
           selection={selection}
           runId={archive.run.id}
+          origin={sourceOrigin}
           onClose={clearEvidence}
         />
       )}

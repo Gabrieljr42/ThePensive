@@ -3,7 +3,10 @@ import "@fontsource/cormorant-garamond/latin-600.css";
 import "@fontsource/cormorant-garamond/latin-600-italic.css";
 import "@fontsource/source-sans-3/latin-400.css";
 import "@fontsource/source-sans-3/latin-600.css";
+import "@fontsource/source-serif-4/latin-400.css";
+import "@fontsource/source-serif-4/latin-400-italic.css";
 import "./globals.css";
+import "./experience.css";
 
 export const metadata: Metadata = {
   title: "Pensieve — The Midnight Archive",

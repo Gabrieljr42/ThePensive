@@ -98,8 +98,8 @@ test("changing the corpus changes the answer and its original source", async ({
   page,
 }) => {
   await page
-    .getByLabel("Collection", { exact: true })
-    .selectOption("lantern-ledger");
+    .getByRole("button", { name: /^Select The Lantern Ledger collection/ })
+    .click();
   await expect(
     page
       .getByTestId("tome-rag")
@@ -277,4 +277,76 @@ test("tablet and narrow mobile preserve reflow and accessible controls", async (
       .analyze();
     expect(results.violations).toEqual([]);
   }
+});
+
+test("the threshold has a cinematic entrance and an immediate desk path", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Pensieve", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Go directly to the desk" }),
+  ).toBeVisible();
+  await expect(page.getByRole("navigation")).toHaveCount(0);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
+  await page.screenshot({ path: "../docs/screenshots/entrance-desktop.png" });
+  await page
+    .getByRole("link", { name: "Enter the archive", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/ask$/);
+  await expect(
+    page.getByRole("button", { name: "Ask the archive", exact: true }),
+  ).toBeEnabled();
+});
+
+test("book objects select the corpus and the constellation uses real citation links", async ({
+  page,
+}) => {
+  await expect(
+    page.getByRole("button", { name: /^Select Harry Potter/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("button", { name: "Explore the constellation", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Evidence constellation", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".constellation-claim-node")).toHaveCount(5);
+  await expect(page.locator(".constellation-source-node")).toHaveCount(3);
+  await expect(page.locator(".source-orbit")).toHaveCount(5);
+  await page.locator(".constellation-source-node").last().focus();
+  await expect(page.locator(".source-orbit.orbit-lit")).toHaveCount(1);
+  await page.locator(".constellation-source-node").last().click();
+  await expect(
+    page.getByText("Exact passage matched", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("dialog").locator("mark")).toHaveText(
+    "The mirror first exposes a private longing and later tests the intention behind a choice.",
+  );
+});
+
+test("searching illuminates only the sources selected for RAG", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Ask the archive", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Prepared source selection trace", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".ritual-source")).toHaveCount(4);
+  await expect(page.locator(".ritual-held")).toHaveCount(2);
+  await expect(page.locator(".ritual-context")).toHaveCount(4);
+  await expect(
+    page.getByRole("button", { name: "Ask the archive", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByLabel("Prepared source selection trace", { exact: true }),
+  ).toHaveCount(0);
 });

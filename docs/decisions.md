@@ -2,17 +2,17 @@
 
 These records capture the recommended approach before implementation. Status: **proposed**, pending implementation evidence and any user steering.
 
-## ADR-001 — one full-stack application with offline processing
+## ADR-001 — separate frontend and AI/backend applications
 
 **Context:** a solo portfolio project needs a polished public site, an interactive reading interface, source ingestion, provider calls, and reproducible evaluation.
 
-**Decision:** use a Next.js TypeScript application for the UI and server endpoints. Keep ingestion and benchmarking in offline commands using shared server modules.
+**Decision:** use Next.js/TypeScript for the UI and HTTP transport; use FastAPI/Python for source processing, retrieval, generation, citations, experiment recording, and evaluation. Run both with PostgreSQL/pgvector through Compose. This updates the initial single-application proposal following the user's architecture preference.
 
 **Alternatives:** Vite plus FastAPI offers a familiar Python processing environment but introduces two application runtimes and deployment boundaries. Separate services support independent scaling but create operational work beyond the pilot's needs.
 
-**Trade-off:** long-running work must be kept out of fragile request lifetimes. Parsing may eventually need a Python tool or worker.
+**Trade-off:** two application runtimes require coordinated local configuration and contracts. FastAPI's OpenAPI export generates the frontend types, and a same-origin proxy keeps browser configuration simple. Long-running processing can gain a worker later.
 
-**Revisit when:** user uploads, slow extraction, or concurrent processing needs durable background jobs or a dedicated Python service.
+**Revisit when:** user uploads, slow extraction, or concurrent generation requires durable background work.
 
 ## ADR-002 — source and retrieval data in PostgreSQL
 

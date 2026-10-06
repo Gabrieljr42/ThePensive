@@ -79,6 +79,8 @@ Implement the signature evidence thread before adding more ambient effects. Buil
 
 ## First implementation slice
 
+**Implemented:** the typed FastAPI mock slice and immersive `/` + `/ask` presentation. The repository now separates `frontend/` and `backend/`, exports OpenAPI to `contracts/`, and runs through the root Compose stack. See [experience notes](experience-upgrade.md) and the current [README](../README.md). Live ingestion and generation remain subsequent milestones.
+
 The next concrete deliverable is `/ask` with a shared question form, two readable tome surfaces, a small original paginated fixture collection, and an evidence drawer that links a claim to an exact source span. The initial fixture is labeled **Original sample collection**. Its measurements remain unavailable until actual measured operations exist.
 
 Begin with the happy path and the insufficient-evidence state. Then connect PostgreSQL retrieval and the provider. This sequence makes the interaction reviewable early while the live architecture is built against the same citation contract.

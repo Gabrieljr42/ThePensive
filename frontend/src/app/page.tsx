@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { ArchiveEntrance } from "@/components/archive/archive-entrance";
 
 export default function Home() {
-  redirect("/ask");
+  return <ArchiveEntrance />;
 }
