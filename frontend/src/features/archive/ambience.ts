@@ -4,6 +4,7 @@
 export class ArchiveAmbience {
   private context: AudioContext | null = null;
   private gain: GainNode | null = null;
+  private filter: BiquadFilterNode | null = null;
   async start(volume: number) {
     if (this.context) {
       await this.context.resume();
@@ -33,6 +34,7 @@ export class ArchiveAmbience {
     const lowpass = context.createBiquadFilter();
     lowpass.type = "lowpass";
     lowpass.frequency.value = 320;
+    this.filter = lowpass;
     noise.connect(lowpass);
     lowpass.connect(gain);
     noise.start();
@@ -56,27 +58,48 @@ export class ArchiveAmbience {
         0.3,
       );
   }
-  play(event: "stir" | "question" | "evidence") {
+  setImmersed(immersed: boolean) {
+    if (this.context && this.filter)
+      this.filter.frequency.setTargetAtTime(
+        immersed ? 90 : 320,
+        this.context.currentTime,
+        0.4,
+      );
+  }
+  play(event: "stir" | "question" | "evidence" | "crossing" | "arrival") {
     const context = this.context;
     if (!context || context.state !== "running" || !this.gain) return;
     const oscillator = context.createOscillator();
     const envelope = context.createGain();
     const start = context.currentTime;
     const frequency =
-      event === "stir" ? 392 : event === "question" ? 261.63 : 329.63;
+      event === "stir"
+        ? 392
+        : event === "question"
+          ? 261.63
+          : event === "crossing"
+            ? 174.61
+            : event === "arrival"
+              ? 523.25
+              : 329.63;
+    const duration =
+      event === "crossing" ? 1.5 : event === "arrival" ? 1.1 : 0.8;
     oscillator.type = "sine";
     oscillator.frequency.setValueAtTime(frequency, start);
     oscillator.frequency.exponentialRampToValueAtTime(
       frequency * 0.7,
-      start + 0.65,
+      start + duration - 0.15,
     );
     envelope.gain.setValueAtTime(0, start);
-    envelope.gain.linearRampToValueAtTime(0.11, start + 0.04);
-    envelope.gain.exponentialRampToValueAtTime(0.001, start + 0.75);
+    envelope.gain.linearRampToValueAtTime(
+      event === "crossing" ? 0.07 : 0.11,
+      start + (event === "crossing" ? 0.25 : 0.04),
+    );
+    envelope.gain.exponentialRampToValueAtTime(0.001, start + duration - 0.05);
     oscillator.connect(envelope);
     envelope.connect(this.gain);
     oscillator.start();
-    oscillator.stop(start + 0.8);
+    oscillator.stop(start + duration);
     oscillator.onended = () => {
       oscillator.disconnect();
       envelope.disconnect();
@@ -91,6 +114,7 @@ export class ArchiveAmbience {
     const context = this.context;
     this.context = null;
     this.gain = null;
+    this.filter = null;
     if (context && context.state !== "closed") await context.close();
   }
 }

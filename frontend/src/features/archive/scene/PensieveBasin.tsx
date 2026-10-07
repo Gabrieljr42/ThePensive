@@ -9,16 +9,19 @@ import { useArchiveStore } from "../store";
 import { sceneUniforms } from "../uniforms";
 import { anchorRegistry } from "../threads/anchors";
 import { archiveDirector } from "../director";
+import { basinPosition, basinScale, liquidHeight } from "../basin";
 
-export const basinPosition: [number, number, number] = [0.95, 0, -0.45];
-export const basinScale: [number, number, number] = [1.2, 1.15, 1.2];
-const liquidHeight = 1.26;
+export { basinPosition, basinScale } from "../basin";
 const vertex = `
+  uniform float uDepression;
   varying vec2 vUv;
   varying vec3 vWorld;
   void main() {
     vUv = uv;
-    vec4 world = modelMatrix * vec4(position, 1.0);
+    vec3 pos = position;
+    float r = length(position.xy);
+    pos.z -= uDepression * .25 * pow(max(0., 1. - r), 2.);
+    vec4 world = modelMatrix * vec4(pos, 1.0);
     vWorld = world.xyz;
     gl_Position = projectionMatrix * viewMatrix * world;
   }
@@ -110,6 +113,37 @@ function RimInlays() {
   );
 }
 
+function makeSurface(segments: number) {
+  const rings = 24;
+  const vertices: number[] = [],
+    uv: number[] = [],
+    indices: number[] = [];
+  for (let ring = 0; ring <= rings; ring++) {
+    const radius = (ring / rings) * 1.012;
+    for (let segment = 0; segment <= segments; segment++) {
+      const angle = (segment / segments) * Math.PI * 2;
+      const x = Math.cos(angle) * radius,
+        y = Math.sin(angle) * radius;
+      vertices.push(x, y, 0);
+      uv.push(x / 2.024 + 0.5, y / 2.024 + 0.5);
+      if (ring < rings && segment < segments) {
+        const a = ring * (segments + 1) + segment,
+          b = a + segments + 1;
+        indices.push(a, b, a + 1, a + 1, b, b + 1);
+      }
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(vertices, 3),
+  );
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 export function PensieveBasin() {
   const quality = useArchiveStore((state) => state.qualityTier);
   const lightMode = useArchiveStore((state) => state.lightMode);
@@ -118,6 +152,8 @@ export function PensieveBasin() {
   const surface = useRef<THREE.ShaderMaterial>(null);
   const mist = useRef<(THREE.ShaderMaterial | null)[]>([]);
   const count = lightMode || quality === "low" ? 48 : 96;
+  const surfaceGeometry = useMemo(() => makeSurface(count), [count]);
+  useEffect(() => () => surfaceGeometry.dispose(), [surfaceGeometry]);
   const profile = useMemo(
     () =>
       [
@@ -163,10 +199,14 @@ export function PensieveBasin() {
       uRipple: { value: 0 },
       uHover: { value: 0 },
       uEvidence: { value: 0 },
+      uDepression: { value: 0 },
     }),
     [],
   );
-  const mistUniforms = useMemo(() => ({ uTime: { value: 0 } }), []);
+  const mistUniforms = useMemo(
+    () => ({ uTime: { value: 0 }, uDepression: { value: 0 } }),
+    [],
+  );
   useEffect(
     () =>
       anchorRegistry.registerWorld("pensieve-surface", () => {
@@ -198,6 +238,7 @@ export function PensieveBasin() {
     u.uRipple.value = basin.ripple;
     u.uHover.value = basin.hover;
     u.uEvidence.value = basin.evidence;
+    u.uDepression.value = sceneUniforms.dive.depression;
     if (light.current)
       light.current.intensity =
         (0.95 + basin.energy * 0.4) *
@@ -242,12 +283,13 @@ export function PensieveBasin() {
         rotation={[-Math.PI / 2, 0, 0]}
         name="MemorySurface"
       >
-        <circleGeometry args={[1.012, count]} />
+        <primitive object={surfaceGeometry} attach="geometry" />
         <shaderMaterial
           ref={surface}
           uniforms={uniforms}
           vertexShader={vertex}
           fragmentShader={fragment}
+          side={THREE.DoubleSide}
         />
       </mesh>
       {quality !== "low" &&

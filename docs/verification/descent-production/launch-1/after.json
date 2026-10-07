@@ -1,0 +1,39 @@
+{
+  "firstMemoryPage": {
+    "x": -2.8180932998657227,
+    "y": 1.2666817903518677,
+    "z": -3
+  },
+  "interiorVisible": false,
+  "cameraPose": {
+    "x": 0.002786499380545487,
+    "y": 2.588170299076053,
+    "z": 5.400000425734044,
+    "fov": 44
+  },
+  "width": 1440,
+  "height": 1000,
+  "clientWidth": 1440,
+  "clientHeight": 1000,
+  "pixelRatio": 1,
+  "minLum": 1.1444,
+  "maxLum": 241.4304,
+  "meanLum": 39.239955688888806,
+  "variance": 1360.329758992478,
+  "paintedFraction": 0.8588444444444444,
+  "bboxCoverage": 0.9864888888888889,
+  "hash": 269939700,
+  "renderer": "WebKit WebGL",
+  "floorRange": 19.583610503388975,
+  "floorReversals": 2,
+  "shelfRange": 226.0037736821855,
+  "shelfReversals": 13,
+  "drawCalls": 100,
+  "triangles": 32080,
+  "surface": {
+    "left": 597.9187944092236,
+    "right": 1225.1070635177089,
+    "top": 216.1620059148795,
+    "bottom": 323.46063951150074
+  }
+}

@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import type { EvidenceResponse, Mode } from "@/lib/contracts";
-import type { ArchiveRun, ScenePhase, Volume } from "./model";
+import {
+  hasReadableAnswer,
+  type ArchiveRun,
+  type ScenePhase,
+  type Volume,
+  type DivePhase,
+} from "./model";
 import { ARCHIVE_VOLUMES } from "./mock/volumes";
 import { MARAUDERS_MAP_QUESTION } from "./mock/marauders-map";
 import {
@@ -32,6 +38,13 @@ interface ArchiveState {
   error: string | null;
   quietReading: boolean;
   lightMode: boolean;
+  divePhase: DivePhase;
+  diveCount: number;
+  journeyPaused: boolean;
+  inquiryStartedAt: number | null;
+  connection: "connected" | "reconnecting";
+  sceneAvailable: boolean;
+  firstReadableMethod: "rag" | "full_context" | null;
 
   // Actions
   setPhase: (phase: ScenePhase) => void;
@@ -55,6 +68,15 @@ interface ArchiveState {
   cancelInquiry: () => void;
   setQuietReading: (quiet: boolean) => void;
   setLightMode: (light: boolean) => void;
+  updateInquiry: (
+    id: number,
+    run: ArchiveRun,
+    connection?: "connected" | "reconnecting",
+  ) => boolean;
+  setDivePhase: (id: number, phase: DivePhase) => void;
+  markDive: () => void;
+  setSceneAvailable: (available: boolean) => void;
+  setJourneyPaused: (paused: boolean) => void;
 }
 
 export const useArchiveStore = create<ArchiveState>((set) => ({
@@ -77,6 +99,13 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
   error: null,
   quietReading: false,
   lightMode: false,
+  divePhase: "idle",
+  diveCount: 0,
+  journeyPaused: false,
+  inquiryStartedAt: null,
+  connection: "connected",
+  sceneAvailable: true,
+  firstReadableMethod: null,
 
   setPhase: (phase) => set({ phase }),
 
@@ -167,6 +196,10 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
         pinnedCitationId: null,
         activeEvidence: null,
         phase: "casting",
+        inquiryStartedAt: Date.now(),
+        firstReadableMethod: null,
+        journeyPaused: false,
+        connection: "connected",
       };
     });
     return id;
@@ -180,9 +213,65 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
     });
     return accepted;
   },
+  updateInquiry: (id, run, connection = "connected") => {
+    let accepted = false;
+    set((state) => {
+      if (state.requestId !== id) return state;
+      accepted = true;
+      const readable = hasReadableAnswer(run);
+      const busy = run.status === "running";
+      return {
+        run,
+        isBusy: busy,
+        connection,
+        firstReadableMethod:
+          state.firstReadableMethod ??
+          run.branches.find(
+            (branch) =>
+              branch.status === "complete" ||
+              branch.introduction ||
+              branch.claims.length,
+          )?.method ??
+          null,
+        phase:
+          state.phase === "evidence" && readable
+            ? "evidence"
+            : readable
+              ? "reading"
+              : busy
+                ? "retrieving"
+                : "desk",
+        error:
+          run.status === "failed"
+            ? "The archive could not complete either method. Try again."
+            : null,
+      };
+    });
+    return accepted;
+  },
+  setDivePhase: (id, divePhase) =>
+    set((state) =>
+      state.requestId === id
+        ? {
+            divePhase,
+            ...(divePhase === "idle" || divePhase === "arriving"
+              ? { journeyPaused: false }
+              : {}),
+          }
+        : state,
+    ),
+  markDive: () => set((state) => ({ diveCount: state.diveCount + 1 })),
+  setSceneAvailable: (sceneAvailable) => set({ sceneAvailable }),
+  setJourneyPaused: (journeyPaused) => set({ journeyPaused }),
   failInquiry: (id, error) =>
     set((state) =>
-      state.requestId === id ? { isBusy: false, phase: "desk", error } : state,
+      state.requestId === id
+        ? {
+            isBusy: false,
+            phase: hasReadableAnswer(state.run) ? "reading" : "desk",
+            error,
+          }
+        : state,
     ),
   cancelInquiry: () =>
     set((state) => ({
@@ -190,6 +279,7 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
       isBusy: false,
       phase: "desk",
       error: null,
+      divePhase: "idle",
       run: null,
       activeCitationId: null,
       pinnedCitationId: null,

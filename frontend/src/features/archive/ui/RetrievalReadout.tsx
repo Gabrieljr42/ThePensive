@@ -1,5 +1,6 @@
 "use client";
 import { useArchiveStore } from "../store";
+import { branchStatus } from "./InquiryStatus";
 
 export function RetrievalReadout() {
   const run = useArchiveStore((s) => s.run);
@@ -22,9 +23,11 @@ export function RetrievalReadout() {
                   " candidates → " +
                   branch.context.selected_source_count +
                   " selected passages"
-                : branch.context.supplied_source_count > 0
-                  ? "Prepared Volume III scope"
-                  : "No prepared evidence in this scope"}
+                : branch.status !== "complete"
+                  ? branchStatus(branch)
+                  : branch.context.supplied_source_count > 0
+                    ? "Prepared Volume III scope"
+                    : "No prepared evidence in this scope"}
             </span>
             <span>
               {branch.metrics.input_tokens?.toLocaleString() ?? "—"} tokens

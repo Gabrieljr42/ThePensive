@@ -1,0 +1,166 @@
+{
+  "conditions": "Desktop Chrome, local loopback, no CPU throttling; not a mobile GPU measurement.",
+  "stats": [
+    {
+      "phase": "approaching",
+      "firstMemoryPage": {
+        "x": -3.0440986156463623,
+        "y": 1.3552981615066528,
+        "z": -3
+      },
+      "interiorVisible": false,
+      "cameraPose": {
+        "x": 0.158498,
+        "y": 2.581796,
+        "z": 4.869566,
+        "fov": 44.482213
+      },
+      "width": 1440,
+      "height": 1000,
+      "clientWidth": 1440,
+      "clientHeight": 1000,
+      "pixelRatio": 1,
+      "minLum": 1,
+      "maxLum": 254.99999999999997,
+      "meanLum": 38.8411045333329,
+      "variance": 1641.5949005817495,
+      "paintedFraction": 0.7992,
+      "bboxCoverage": 0.9864888888888889,
+      "hash": 2072844341,
+      "renderer": "WebKit WebGL",
+      "floorRange": 37.10597121510111,
+      "floorReversals": 4,
+      "shelfRange": 97.41070933921945,
+      "shelfReversals": 10,
+      "drawCalls": 99,
+      "triangles": 31972,
+      "surface": {
+        "left": 553.4466771528841,
+        "right": 1248.3942865998613,
+        "top": 219.52783205132337,
+        "bottom": 346.365634700623
+      }
+    },
+    {
+      "phase": "crossing",
+      "firstMemoryPage": {
+        "x": -3.0440986156463623,
+        "y": 1.3552981615066528,
+        "z": -3
+      },
+      "interiorVisible": false,
+      "cameraPose": {
+        "x": 0.95,
+        "y": 2.398143,
+        "z": 0.928904,
+        "fov": 47.993196
+      },
+      "width": 1440,
+      "height": 1000,
+      "clientWidth": 1440,
+      "clientHeight": 1000,
+      "pixelRatio": 1,
+      "minLum": 2.4252000000000002,
+      "maxLum": 210.878,
+      "meanLum": 130.87943241777654,
+      "variance": 1751.3675962384987,
+      "paintedFraction": 0.9719555555555556,
+      "bboxCoverage": 0.9864888888888889,
+      "hash": 3674943861,
+      "renderer": "WebKit WebGL",
+      "floorRange": 56.25451940538932,
+      "floorReversals": 6,
+      "shelfRange": 73.12281002814888,
+      "shelfReversals": 5,
+      "drawCalls": 26,
+      "triangles": 24964,
+      "surface": {
+        "left": -1185.0580256561052,
+        "right": 2625.0580256561047,
+        "top": 133.3994659157618,
+        "bottom": 1510.9271619699266
+      }
+    },
+    {
+      "phase": "within",
+      "firstMemoryPage": {
+        "x": -3.0440986156463623,
+        "y": 1.3552981615066528,
+        "z": -3
+      },
+      "interiorVisible": true,
+      "cameraPose": {
+        "x": 0,
+        "y": 1.8,
+        "z": 3.218044,
+        "fov": 47.993196
+      },
+      "width": 1440,
+      "height": 1000,
+      "clientWidth": 1440,
+      "clientHeight": 1000,
+      "pixelRatio": 1,
+      "minLum": 0.2888,
+      "maxLum": 188.9342,
+      "meanLum": 41.99067658666632,
+      "variance": 1510.8059281099743,
+      "paintedFraction": 0.7944,
+      "bboxCoverage": 0.9864888888888889,
+      "hash": 514712923,
+      "renderer": "WebKit WebGL",
+      "floorRange": 125.54294090629158,
+      "floorReversals": 19,
+      "shelfRange": 196.1120946696098,
+      "shelfReversals": 7,
+      "drawCalls": 8,
+      "triangles": 6668,
+      "surface": {
+        "left": 598.7016361124727,
+        "right": 1712.9583161806513,
+        "top": 597.156803805678,
+        "bottom": 677.3531217153268
+      }
+    },
+    {
+      "phase": "waiting",
+      "firstMemoryPage": {
+        "x": -3.0440986156463623,
+        "y": 1.3552981615066528,
+        "z": -3
+      },
+      "interiorVisible": true,
+      "cameraPose": {
+        "x": 0,
+        "y": 1.8,
+        "z": 2.8,
+        "fov": 47.993196
+      },
+      "width": 1440,
+      "height": 1000,
+      "clientWidth": 1440,
+      "clientHeight": 1000,
+      "pixelRatio": 1,
+      "minLum": 1.2888,
+      "maxLum": 190.86999999999998,
+      "meanLum": 43.48935868444422,
+      "variance": 1609.2478741291077,
+      "paintedFraction": 0.7980444444444444,
+      "bboxCoverage": 0.9864888888888889,
+      "hash": 583441612,
+      "renderer": "WebKit WebGL",
+      "floorRange": 112.61660079861728,
+      "floorReversals": 13,
+      "shelfRange": 80.85638040946927,
+      "shelfReversals": 6,
+      "drawCalls": 8,
+      "triangles": 6668,
+      "surface": {
+        "left": 573.7185820519859,
+        "right": 1917.4716376954677,
+        "top": 605.145319133722,
+        "bottom": 710.9293157891397
+      }
+    }
+  ],
+  "errors": []
+}

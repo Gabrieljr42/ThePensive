@@ -6,6 +6,17 @@ import * as THREE from "three";
 import { sceneUniforms } from "../uniforms";
 import { globalCameraRef } from "../threads/ThreadLayer";
 import { useArchiveStore } from "../store";
+import { memoryWalkPose } from "../memoryWalk";
+
+function updateCameraLens(camera: THREE.Camera, fov: number) {
+  if (
+    camera instanceof THREE.PerspectiveCamera &&
+    Math.abs(camera.fov - fov) > 0.01
+  ) {
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+  }
+}
 
 export function CameraRig() {
   const { camera, size } = useThree();
@@ -26,6 +37,7 @@ export function CameraRig() {
   );
   const reducedMotion = useArchiveStore((s) => s.reducedMotion);
   const tier = useArchiveStore((s) => s.qualityTier);
+  const wasDiving = useRef(false);
 
   useEffect(() => {
     globalCameraRef.current = camera;
@@ -51,10 +63,41 @@ export function CameraRig() {
 
   useFrame((_, delta) => {
     const state = useArchiveStore.getState();
+    const diving = state.divePhase !== "idle";
     const mobile = size.width < 700;
-    const shiftX = mobile ? 0.6 : 0;
-    const shiftZ = mobile ? 1.5 : 0;
+    if (state.divePhase === "waiting") {
+      if (
+        !state.journeyPaused &&
+        !state.reducedMotion &&
+        !state.quietReading &&
+        !state.lightMode
+      )
+        sceneUniforms.dive.walkTime += Math.min(delta, 0.05);
+      const pose = memoryWalkPose(sceneUniforms.dive.walkTime);
+      camera.position.set(pose.x, pose.y, pose.z);
+      camera.lookAt(pose.targetX, pose.targetY, pose.targetZ);
+      currentPos.current.copy(camera.position);
+      lookTarget.current.set(pose.targetX, pose.targetY, pose.targetZ);
+      return;
+    }
+    const shiftX = mobile ? 0.6 * sceneUniforms.dive.mobileBlend : 0;
+    const shiftZ = mobile ? 1.5 * sceneUniforms.dive.mobileBlend : 0;
+    if (wasDiving.current && !diving) {
+      currentPos.current.set(
+        sceneUniforms.camera.x + shiftX,
+        sceneUniforms.camera.y,
+        sceneUniforms.camera.z + shiftZ,
+      );
+      lookTarget.current.set(
+        sceneUniforms.camera.targetX + shiftX,
+        sceneUniforms.camera.targetY,
+        sceneUniforms.camera.targetZ,
+      );
+    }
+    wasDiving.current = diving;
+    updateCameraLens(camera, sceneUniforms.camera.fov);
     if (
+      diving ||
       reducedMotion ||
       tier === "low" ||
       state.lightMode ||
@@ -70,6 +113,13 @@ export function CameraRig() {
         sceneUniforms.camera.targetY,
         sceneUniforms.camera.targetZ,
       );
+      currentPos.current.copy(camera.position);
+      lookTarget.current.set(
+        sceneUniforms.camera.targetX + shiftX,
+        sceneUniforms.camera.targetY,
+        sceneUniforms.camera.targetZ,
+      );
+      mouseRef.current = { x: 0, y: 0, targetX: 0, targetY: 0 };
       return;
     }
 

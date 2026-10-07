@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { CameraRig } from "./CameraRig";
@@ -22,6 +22,20 @@ import { DeskInstruments } from "./DeskInstruments";
 import { ArchiveEnvironment } from "./ArchiveEnvironment";
 import { SceneRuntime } from "./SceneRuntime";
 import { presentMemories } from "../presentation";
+import { MemoryInterior } from "./MemoryInterior";
+import { MemoryPass } from "./MemoryPass";
+
+function ArchiveWorld({ children }: { children: ReactNode }) {
+  const root = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (root.current) root.current.visible = sceneUniforms.dive.roomVisible;
+  });
+  return (
+    <group ref={root} name="ArchiveWorld">
+      {children}
+    </group>
+  );
+}
 
 function useDocumentHidden() {
   const [hidden, setHidden] = useState(false);
@@ -84,6 +98,11 @@ function ArchiveLights() {
 }
 
 type FrameStats = {
+  writtenFolioCount: number;
+  fragmentTexts: string[];
+  firstMemoryPage: { x: number; y: number; z: number } | null;
+  interiorVisible: boolean;
+  cameraPose: { x: number; y: number; z: number; fov: number };
   width: number;
   height: number;
   clientWidth: number;
@@ -309,6 +328,29 @@ function publishFrameReader(
           })
         : [];
       return {
+        writtenFolioCount:
+          scene.getObjectByName("MemoryFolios")?.children.length ?? 0,
+        fragmentTexts: (
+          scene.getObjectByName("MemoryFolios")?.children ?? []
+        ).map((child) => String(child.userData.memoryFragment?.text ?? "")),
+        firstMemoryPage: (() => {
+          const pages = scene.getObjectByName("MemoryPages") as
+            THREE.InstancedMesh | undefined;
+          if (!pages) return null;
+          const matrix = new THREE.Matrix4();
+          pages.getMatrixAt(0, matrix);
+          const p = new THREE.Vector3().setFromMatrixPosition(matrix);
+          return { x: p.x, y: p.y, z: p.z };
+        })(),
+        interiorVisible: Boolean(
+          scene.getObjectByName("MemoryInterior")?.visible,
+        ),
+        cameraPose: {
+          x: camera.position.x,
+          y: camera.position.y,
+          z: camera.position.z,
+          fov: (camera as THREE.PerspectiveCamera).fov,
+        },
         width,
         height,
         clientWidth: canvas.clientWidth,
@@ -350,6 +392,7 @@ export function ArchiveCanvas({
   const reducedMotion = useArchiveStore((s) => s.reducedMotion);
   const quietReading = useArchiveStore((s) => s.quietReading);
   const lightMode = useArchiveStore((s) => s.lightMode);
+  const journeyPaused = useArchiveStore((s) => s.journeyPaused);
   const run = useArchiveStore((s) => s.run);
   const mounted = useArchiveStore((s) => s.qualityGate.mounted);
   const hidden = useDocumentHidden();
@@ -357,7 +400,7 @@ export function ArchiveCanvas({
   const cap = pixelRatioCap();
   const frameloop = archiveFrameLoop({
     hidden,
-    reducedMotion: reducedMotion || quietReading,
+    reducedMotion: reducedMotion || quietReading || journeyPaused,
     tier: lightMode ? "low" : qualityTier,
   });
 
@@ -376,7 +419,11 @@ export function ArchiveCanvas({
       style={{ opacity: mounted ? 1 : 0, transition: "opacity .4s" }}
     >
       <Canvas
-        shadows={qualityTier === "high" && !reducedMotion && !lightMode ? "percentage" : false}
+        shadows={
+          qualityTier === "high" && !reducedMotion && !lightMode
+            ? "percentage"
+            : false
+        }
         frameloop={frameloop}
         dpr={[1, cap]}
         camera={{ position: [0.1, 2.05, 6.9], fov: 44 }}
@@ -406,23 +453,27 @@ export function ArchiveCanvas({
           <ArchiveEnvironment />
           <SceneRuntime />
           <CameraRig />
-          <ArchiveLights />
-          <Stacks />
-          <ObservatoryWindow />
-          <Moonbeam />
-          <Dust />
-          <PensieveBasin />
-          <group
-            position={[deskPose.x, 0, deskPose.z]}
-            rotation={[0, deskPose.yaw, 0]}
-          >
-            <Desk />
-            <VolumesRack />
-            <Candle />
-            <DeskInstruments />
-          </group>
-          <RetrievalNodes />
-          <PageBloom />
+          <MemoryPass />
+          <MemoryInterior />
+          <ArchiveWorld>
+            <ArchiveLights />
+            <Stacks />
+            <ObservatoryWindow />
+            <Moonbeam />
+            <Dust />
+            <PensieveBasin />
+            <group
+              position={[deskPose.x, 0, deskPose.z]}
+              rotation={[0, deskPose.yaw, 0]}
+            >
+              <Desk />
+              <VolumesRack />
+              <Candle />
+              <DeskInstruments />
+            </group>
+            <RetrievalNodes />
+            <PageBloom />
+          </ArchiveWorld>
         </Suspense>
       </Canvas>
     </div>

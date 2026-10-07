@@ -37,9 +37,27 @@ export interface SceneUniforms {
     evidenceProgress: number; // 0..1
   };
   basin: { energy: number; ripple: number; hover: number; evidence: number };
+  dive: {
+    interior: number;
+    veil: number;
+    depression: number;
+    travel: number;
+    roomVisible: boolean;
+    mobileBlend: number;
+    walkTime: number;
+  };
 }
 
 export const sceneUniforms: SceneUniforms = {
+  dive: {
+    interior: 0,
+    veil: 0,
+    depression: 0,
+    travel: 0,
+    roomVisible: true,
+    mobileBlend: 1,
+    walkTime: 0,
+  },
   camera: {
     x: -0.2,
     y: 2.4,

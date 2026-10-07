@@ -1,6 +1,6 @@
 # Pensieve — O Mergulho da Memória
 
-**Plano de 7 de outubro de 2026.** Gatilho: enviar uma pergunta pelo botão **Ask the Archive** ou pelo teclado. Escopo deste documento: direção de animação, experiência de espera e integração necessária. A nova sequência ainda não foi implementada no site.
+**Plano de 7 de outubro de 2026.** Gatilho: enviar uma pergunta pelo botão **Ask the Archive** ou pelo teclado. Escopo deste documento: direção de animação, experiência de espera e integração necessária. A sequência visual e o controlador de espera foram implementados; [estado da execução e validação](descent-implementation.md). A integração com uma IA real continua dependendo do processamento no servidor.
 
 **Direção escolhida:** a pergunta deixa o manuscrito como um fio de tinta, entra na bacia e conduz a câmera através da prata. Sob a superfície existe um arquivo de memórias. A chegada de uma resposta reorganiza esse espaço e devolve o visitante à leitura.
 

@@ -4,8 +4,9 @@ import { useEffect, useRef } from "react";
 import { useArchiveStore } from "../store";
 import { archiveDirector } from "../director";
 import { anchorRegistry } from "../threads/anchors";
-import { mockArchiveAdapter } from "../mock/adapter";
+import { submitInquiry } from "../inquiry/controller";
 import { MARAUDERS_MAP_QUESTION } from "../mock/marauders-map";
+import { InquiryStatus } from "./InquiryStatus";
 
 export function QuestionLeaf() {
   const sealRef = useRef<HTMLButtonElement | null>(null);
@@ -32,30 +33,15 @@ export function QuestionLeaf() {
     if (e) e.preventDefault();
     if (isBusy || !question.trim()) return;
 
-    const requestId = useArchiveStore.getState().beginInquiry();
-    archiveDirector.castQuestion();
-    try {
-      const activeRun = await mockArchiveAdapter.createRun(
-        {
-          question: question.trim(),
-          mode,
-          corpus_id: "harry-potter-archive",
-          corpus_version: "vol-3-poa",
-        },
-        selectedVolumeIds,
-      );
-
-      if (useArchiveStore.getState().completeInquiry(requestId, activeRun))
-        archiveDirector.revealRun();
-    } catch {
-      useArchiveStore
-        .getState()
-        .failInquiry(
-          requestId,
-          "The archive could not complete this inquiry. Please try again.",
-        );
-      archiveDirector.resetRitual();
-    }
+    await submitInquiry(
+      {
+        question: question.trim(),
+        mode,
+        corpus_id: "harry-potter-archive",
+        corpus_version: "vol-3-poa",
+      },
+      selectedVolumeIds,
+    );
   };
 
   const suggestions = [
@@ -164,6 +150,7 @@ export function QuestionLeaf() {
           </button>
         </div>
       </form>
+      <InquiryStatus />
       {error && (
         <p role="alert" className="inquiry-error">
           {error}

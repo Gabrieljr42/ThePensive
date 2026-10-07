@@ -9,7 +9,19 @@ export function TwinTomes() {
   const phase = useArchiveStore((s) => s.phase);
   const mode = useArchiveStore((s) => s.run?.mode ?? s.mode);
   const run = useArchiveStore((s) => s.run);
-  const [mobileTab, setMobileTab] = useState<"rag" | "full">("rag");
+  const firstReadable = useArchiveStore((s) => s.firstReadableMethod);
+  const [choice, setChoice] = useState<{
+    runId: string;
+    method: "rag" | "full";
+  } | null>(null);
+  const mobileTab =
+    choice?.runId === run?.id
+      ? choice?.method
+      : firstReadable === "full_context"
+        ? "full"
+        : "rag";
+  const setMobileTab = (method: "rag" | "full") =>
+    run && setChoice({ runId: run.id, method });
 
   if (phase !== "reading" && phase !== "evidence") {
     return null;
@@ -27,6 +39,8 @@ export function TwinTomes() {
   return (
     <section
       aria-label="Archive Reading Tomes"
+      id="archive-reading-tomes"
+      tabIndex={-1}
       className="relative z-20 w-full mt-2"
     >
       {/* Mobile Tab Toggle for Compare Mode */}
@@ -75,7 +89,9 @@ export function TwinTomes() {
 
         {/* Central Gutter Measurement Scale */}
         {isCompare && (
-          <GutterScale ragBranch={ragBranch} fullBranch={fullBranch} />
+          <div className="tome-gutter">
+            <GutterScale ragBranch={ragBranch} fullBranch={fullBranch} />
+          </div>
         )}
 
         {/* Right / Full Context Tome */}

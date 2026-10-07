@@ -13,11 +13,17 @@ export function SceneRuntime() {
     const s = useArchiveStore.getState();
     if (!firstFrame.current) {
       firstFrame.current = true;
-      requestAnimationFrame(() =>
-        useArchiveStore.getState().markSceneMounted(),
-      );
+      requestAnimationFrame(() => {
+        useArchiveStore.getState().markSceneMounted();
+        useArchiveStore.getState().setSceneAvailable(true);
+      });
     }
-    if (archiveDirector.isAnimating() && !s.reducedMotion && !s.quietReading)
+    if (
+      archiveDirector.isAnimating() &&
+      !s.reducedMotion &&
+      !s.quietReading &&
+      !s.journeyPaused
+    )
       invalidate();
     if (s.reducedMotion || s.lightMode || s.quietReading || delta > 0.15)
       return;

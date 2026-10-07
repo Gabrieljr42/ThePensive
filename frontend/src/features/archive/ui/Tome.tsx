@@ -5,6 +5,7 @@ import type { ArchiveBranch } from "../model";
 import { anchorRegistry } from "../threads/anchors";
 import { InkText } from "./InkText";
 import { CitationMark } from "./CitationMark";
+import { branchStatus } from "./InquiryStatus";
 
 interface TomeProps {
   branch: ArchiveBranch;
@@ -34,7 +35,9 @@ export function Tome({ branch, isRag }: TomeProps) {
   return (
     <div
       ref={containerRef}
-      className={`relative flex-1 min-w-0 rounded-sm p-6 sm:p-8 shadow-[0_16px_45px_rgba(0,0,0,0.65)] border ${accentColor} ${bgGradient} text-[#18161d] transition-all duration-300`}
+      className={`archive-tome relative flex-1 min-w-0 rounded-sm p-6 sm:p-8 shadow-[0_16px_45px_rgba(0,0,0,0.65)] border ${accentColor} ${bgGradient} text-[#18161d] transition-all duration-300`}
+      data-branch-status={branch.status}
+      data-method={branch.method}
     >
       {/* Decorative Edge Inlay */}
       <div className="pointer-events-none absolute inset-1.5 rounded-xs border border-[#8a671d]/15" />
@@ -58,13 +61,30 @@ export function Tome({ branch, isRag }: TomeProps) {
               : "bg-[#b8dbeb]/50 text-[#1e4454] border border-[#6b9cb0]/30"
           }`}
         >
-          {isRag
-            ? branch.context.selected_source_count + " Filtered Passages"
-            : branch.context.supplied_source_count > 0
-              ? "Prepared Volume Scope"
-              : "No prepared evidence"}
+          {branch.status !== "complete"
+            ? "In progress"
+            : isRag
+              ? branch.context.selected_source_count + " Filtered Passages"
+              : branch.context.supplied_source_count > 0
+                ? "Prepared Volume Scope"
+                : "No prepared evidence"}
         </span>
       </div>
+
+      {branch.status !== "complete" && (
+        <div className="tome-pending" role="status">
+          <span className="tome-pending-mark" aria-hidden="true">
+            {isRag ? "✦" : "☾"}
+          </span>
+          <p>{branchStatus(branch)}</p>
+          <span>
+            {branch.error ??
+              (branch.claims.length || branch.introduction
+                ? "An answer is arriving. References will appear as they are verified."
+                : "The other method remains available while this memory takes shape.")}
+          </span>
+        </div>
+      )}
 
       {/* Answer Title */}
       <h2 className="mt-6 font-display text-2xl sm:text-3xl text-[#1a1721] font-semibold tracking-tight">
@@ -88,9 +108,11 @@ export function Tome({ branch, isRag }: TomeProps) {
             </span>
             <div className="font-reading text-[#1c1922]">
               <InkText text={claim.text} delayMs={200 + idx * 150} />
-              {claim.citations.map((cit) => (
-                <CitationMark key={cit.id} citation={cit} />
-              ))}
+              {claim.citations
+                .filter((cit) => cit.structural_status === "verified")
+                .map((cit) => (
+                  <CitationMark key={cit.id} citation={cit} />
+                ))}
             </div>
           </div>
         ))}

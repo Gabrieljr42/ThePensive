@@ -4,7 +4,7 @@
 
 Creative recommendation: **The Midnight Archive** — a candlelit library opening onto a celestial observatory. Two illuminated tomes make the comparison visible; a thread of light connects an answer claim to its source passage.
 
-Status: **the functional first slice and immersive presentation are implemented.** The Next.js interface consumes a separate FastAPI backend through generated OpenAPI types. Answers, retrieval, and measurements are prepared demonstrations; source matching and experiment storage are functional.
+Status: **the memory chamber and cinematic descent are implemented.** The current Next.js archive uses a local progressive adapter with prepared answers. A snapshot transport can connect the same presentation to the separate FastAPI API; both currently use demonstration data. Source matching is functional, and the backend offers experiment storage.
 
 ## Enter the archive
 
@@ -20,9 +20,9 @@ The Compose stack contains Next.js, FastAPI, and PostgreSQL with pgvector. The d
 
 ## Current experience
 
-The threshold reveals the archive and offers an immediate path to the desk. Select an illuminated book, write a question on the manuscript, and choose RAG, Full Context, or Compare. The reading instrument and source-light trace show the prepared run progressing. The Twin Tomes reveal the answers. A citation opens an illuminated source chamber; the optional constellation exposes the stored claim-to-passage links.
+The threshold reveals the archive and offers an immediate path to the desk. Select an illuminated book, write a question on the manuscript, and choose RAG, Full Context, or Compare. Ask the Archive sends a thread into the basin and carries the camera through its silver surface into a memory interior. The first available method releases its reading tome while the other continues. A citation opens its source passage. Skip the animation to keep waiting at the desk, or cancel the inquiry separately.
 
-The two available collections are original Harry Potter companion notes and The Lantern Ledger, an original archive tale. Folio references belong to these fixtures, not to novel editions. Suggested questions have prepared scenarios; other questions produce an explicit unprepared-answer state.
+The current room displays seven illustrative Harry Potter volumes. Its prepared investigation concerns the Marauder's Map in Volume III; other questions or scopes produce an explicit unprepared-answer state. The backend separately retains the original companion-note and Lantern Ledger fixtures. Live literary ingestion and model generation remain future work.
 
 **Mocked:** retrieval, reranking, model generation, generation timing, token usage, and API cost. **Functional:** HTTP contracts, corpus selection, run lifecycle, cancellation, exact quotation resolution, experiment-scoped evidence lookup, and PostgreSQL snapshot storage in Compose. Native backend development uses bounded memory storage when `DATABASE_URL` is unset.
 
@@ -69,11 +69,13 @@ To regenerate contracts, run `python scripts/export_contracts.py` from the root 
 
 The native production build uses `npm run build` followed by `npm start` in `frontend/`. Its standalone launcher includes the required public/static assets and binds to [127.0.0.1:3000](http://127.0.0.1:3000/). `PENSIEVE_HOST` and `PENSIEVE_PORT` can override that local binding.
 
-Verification: 13 backend tests, 13 production browser tests, TypeScript, ESLint, and the native production build pass. Browser coverage includes automated accessibility scans and a local layout/interaction performance sample. The sample is laboratory evidence, not field Core Web Vitals certification.
+Browser coverage includes automated accessibility scans, progressive methods, interruptions, exact citations and laboratory performance samples. Current implementation details and verification are recorded in [the descent report](docs/descent-implementation.md). Laboratory samples do not certify field Core Web Vitals or actual mobile GPU performance.
 
 Docker Compose configuration was validated, but the local Docker engine returned internal errors during the image build. Container runtime verification is outstanding; the native production application is available. No global Docker restart was performed.
 
 - [Immersive upgrade, references, and verification](docs/experience-upgrade.md)
+- [Descent preview with adjustable delays and failures](http://localhost:3000/lab/descent)
+- [Cinematic descent implementation](docs/descent-implementation.md)
 - [Original artwork and exact generation prompts](frontend/public/art/README.md)
 - [Desktop entrance screenshot](docs/screenshots/entrance-desktop.png)
 - [Desktop reading room screenshot](docs/screenshots/ask-desktop.png)

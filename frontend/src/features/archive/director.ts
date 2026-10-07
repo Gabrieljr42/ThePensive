@@ -1,8 +1,11 @@
 import gsap from "gsap";
 import { sceneUniforms } from "./uniforms";
 import { useArchiveStore } from "./store";
+import { diveDirector } from "./diveDirector";
+import { hasReadableAnswer } from "./model";
 
 let activeTimeline: gsap.core.Timeline | null = null;
+let revealedInquiry = -1;
 const deskCamera = {
   x: 0.05,
   y: 2.6,
@@ -48,6 +51,7 @@ export const archiveDirector = {
   isAnimating() {
     return (
       Boolean(activeTimeline?.isActive()) ||
+      diveDirector.isAnimating() ||
       gsap.isTweening(sceneUniforms.basin) ||
       gsap.isTweening(sceneUniforms.environment) ||
       gsap.isTweening(sceneUniforms.thread)
@@ -80,6 +84,7 @@ export const archiveDirector = {
       );
   },
   jumpToDesk() {
+    diveDirector.reset();
     stop();
     Object.assign(sceneUniforms.camera, deskCamera);
     Object.assign(sceneUniforms.environment, {
@@ -90,7 +95,8 @@ export const archiveDirector = {
     useArchiveStore.getState().resetToDesk();
     focusDesk();
   },
-  resetView() {
+  resetView(focus = true) {
+    diveDirector.reset();
     stop();
     Object.assign(sceneUniforms.camera, entryCamera);
     Object.assign(sceneUniforms.environment, {
@@ -101,9 +107,10 @@ export const archiveDirector = {
     this.resetRitual();
     useArchiveStore.getState().cancelInquiry();
     useArchiveStore.getState().setPhase("threshold");
-    requestAnimationFrame(() =>
-      document.getElementById("archive-enter")?.focus(),
-    );
+    if (focus)
+      requestAnimationFrame(() =>
+        document.getElementById("archive-enter")?.focus(),
+      );
   },
   resetRitual() {
     Object.assign(sceneUniforms.basin, {
@@ -140,11 +147,12 @@ export const archiveDirector = {
   },
   revealRun() {
     const s = useArchiveStore.getState();
+    const mode = s.run?.mode ?? s.mode;
     sceneUniforms.retrieval.active = true;
     sceneUniforms.tomes.revealProgress = 1;
-    sceneUniforms.tomes.ragGlow = s.mode === "full_context" ? 0 : 1;
-    sceneUniforms.tomes.fullGlow = s.mode === "rag" ? 0 : 1;
-    sceneUniforms.retrieval.pageBloom = s.mode === "rag" ? 0 : 1;
+    sceneUniforms.tomes.ragGlow = mode === "full_context" ? 0 : 1;
+    sceneUniforms.tomes.fullGlow = mode === "rag" ? 0 : 1;
+    sceneUniforms.retrieval.pageBloom = mode === "rag" ? 0 : 1;
     if (still()) {
       sceneUniforms.basin.energy = 0.16;
       sceneUniforms.retrieval.returnThreadsProgress = 1;
@@ -190,6 +198,7 @@ export const archiveDirector = {
     s.setHoveredVolume(s.hoveredVolumeId);
   },
   cancelInquiry() {
+    diveDirector.skip();
     stop();
     this.resetRitual();
     useArchiveStore.getState().cancelInquiry();
@@ -225,6 +234,7 @@ export const archiveDirector = {
     gsap.to(sceneUniforms.thread, { evidenceProgress: 0, duration: 0.25 });
   },
   settleMotion() {
+    if (useArchiveStore.getState().divePhase !== "idle") diveDirector.skip();
     stop();
     const s = useArchiveStore.getState();
     Object.assign(
@@ -239,6 +249,34 @@ export const archiveDirector = {
     sceneUniforms.basin.ripple = 0;
   },
   dispose() {
+    diveDirector.reset();
     stop();
+  },
+  beginDive(id: number) {
+    stop();
+    diveDirector.begin(id);
+  },
+  receiveInquiry(id: number) {
+    const state = useArchiveStore.getState();
+    if (state.requestId !== id) return;
+    if (hasReadableAnswer(state.run) || !state.isBusy) {
+      diveDirector.finish(id);
+      if (hasReadableAnswer(state.run) && revealedInquiry !== id) {
+        revealedInquiry = id;
+        this.revealRun();
+      }
+    }
+  },
+  finishDive(id: number) {
+    diveDirector.finish(id);
+  },
+  skipDive() {
+    diveDirector.skip();
+  },
+  suspendDive() {
+    diveDirector.suspend();
+  },
+  resumeDive() {
+    diveDirector.resume();
   },
 };

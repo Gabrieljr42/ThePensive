@@ -16,6 +16,7 @@ import { TwinTomes } from "./ui/TwinTomes";
 import { EvidenceLeaf } from "./ui/EvidenceLeaf";
 import { RoomSettings } from "./ui/RoomSettings";
 import { sceneUniforms } from "./uniforms";
+import { DiveOverlay } from "./ui/DiveOverlay";
 
 const ArchiveCanvas = dynamic(
   () => import("./scene/ArchiveCanvas").then((mod) => mod.ArchiveCanvas),
@@ -47,6 +48,9 @@ export function MidnightArchive({
   const ready = useArchiveStore((s) => s.qualityGate.mounted);
   const quiet = useArchiveStore((s) => s.quietReading);
   const reduced = useArchiveStore((s) => s.reducedMotion);
+  const divePhase = useArchiveStore((s) => s.divePhase);
+  const busy = useArchiveStore((s) => s.isBusy);
+  const diving = divePhase !== "idle" && divePhase !== "arriving";
   const [sceneReady, setSceneReady] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const atDesk = !["dark", "threshold", "approaching"].includes(phase);
@@ -65,7 +69,7 @@ export function MidnightArchive({
     });
     const id = window.setTimeout(() => setSceneReady(true), 0);
     if (initialPhase === "desk") archiveDirector.jumpToDesk();
-    else archiveDirector.resetView();
+    else archiveDirector.resetView(false);
     return () => {
       cancelled = true;
       window.clearTimeout(id);
@@ -82,6 +86,8 @@ export function MidnightArchive({
         (phase === "reading" || phase === "evidence" ? "is-reading " : "")
       }
       data-phase={phase}
+      data-dive-phase={divePhase}
+      data-inquiry-busy={busy}
       data-still={quiet || reduced}
       data-scene-status={unavailable ? "fallback" : ready ? "ready" : "loading"}
     >
@@ -89,15 +95,24 @@ export function MidnightArchive({
         href="#archive-research-desk"
         onClick={(event) => {
           event.preventDefault();
-          archiveDirector.jumpToDesk();
+          if (diving) archiveDirector.skipDive();
+          else if (atDesk)
+            document
+              .getElementById("archive-research-desk")
+              ?.focus({ preventScroll: true });
+          else archiveDirector.jumpToDesk();
         }}
         className="archive-skip-link"
       >
         Skip directly to Research Desk
       </a>
       {!atDesk && (
-        <div id="archive-research-desk" tabIndex={-1} className="sr-only"
-          onFocus={() => archiveDirector.jumpToDesk()} />
+        <div
+          id="archive-research-desk"
+          tabIndex={-1}
+          className="sr-only"
+          onFocus={() => archiveDirector.jumpToDesk()}
+        />
       )}
       <div
         className="room-poster"
@@ -105,8 +120,20 @@ export function MidnightArchive({
         aria-hidden="true"
       />
       {sceneReady && !unavailable && (
-        <SceneBoundary onUnavailable={() => setUnavailable(true)}>
-          <ArchiveCanvas onUnavailable={() => setUnavailable(true)} />
+        <SceneBoundary
+          onUnavailable={() => {
+            setUnavailable(true);
+            useArchiveStore.getState().setSceneAvailable(false);
+            archiveDirector.skipDive();
+          }}
+        >
+          <ArchiveCanvas
+            onUnavailable={() => {
+              setUnavailable(true);
+              useArchiveStore.getState().setSceneAvailable(false);
+              archiveDirector.skipDive();
+            }}
+          />
         </SceneBoundary>
       )}
       <div className="room-scrim" aria-hidden="true" />
@@ -114,9 +141,14 @@ export function MidnightArchive({
         <RoomSettings />
       </div>
       <ThreadLayer />
+      <DiveOverlay />
       <ThresholdTitle />
       {atDesk && (
-        <div className="research-shell">
+        <div
+          className="research-shell"
+          inert={diving}
+          aria-hidden={diving ? true : undefined}
+        >
           <header className="research-header">
             <Link
               href="/"

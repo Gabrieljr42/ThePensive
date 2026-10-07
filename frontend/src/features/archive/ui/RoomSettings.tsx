@@ -53,12 +53,22 @@ export function RoomSettings() {
         state.activeCitationId !== previous.activeCitationId
       )
         audio.current?.play("evidence");
+      if (state.divePhase !== previous.divePhase)
+        audio.current?.setImmersed(
+          state.divePhase === "within" || state.divePhase === "waiting",
+        );
     });
     const stir = () => audio.current?.play("stir");
+    const crossing = () => audio.current?.play("crossing");
+    const arrival = () => audio.current?.play("arrival");
     window.addEventListener("pensieve-stir", stir);
+    window.addEventListener("pensieve-crossing", crossing);
+    window.addEventListener("pensieve-arrival", arrival);
     return () => {
       unsubscribe();
       window.removeEventListener("pensieve-stir", stir);
+      window.removeEventListener("pensieve-crossing", crossing);
+      window.removeEventListener("pensieve-arrival", arrival);
     };
   }, []);
   function save(q: boolean, l: boolean) {
@@ -80,6 +90,8 @@ export function RoomSettings() {
     }
     try {
       await engine.start(volume / 100);
+      const phase = useArchiveStore.getState().divePhase;
+      engine.setImmersed(phase === "within" || phase === "waiting");
       setSound(true);
       setAudioError(false);
     } catch {
