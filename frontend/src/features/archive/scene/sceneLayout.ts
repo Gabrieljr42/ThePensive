@@ -53,7 +53,11 @@ export const materialRoles: Record<MaterialRoleName, MaterialRole> = {
 };
 
 /** Deterministic field the meshes sample. Same coordinates, different roles, different values. */
-export function sampleMaterialField(role: MaterialRoleName, x: number, y: number): number {
+export function sampleMaterialField(
+  role: MaterialRoleName,
+  x: number,
+  y: number,
+): number {
   const spec = materialRoles[role];
   return fbmNoise(x + spec.offset[0] * 9, y + spec.offset[1] * 9, 3);
 }
@@ -116,7 +120,15 @@ export interface BookPlacement {
   color: string;
 }
 
-const clothColors = ["#6a3d32", "#3e4a5e", "#3f5646", "#6d4c34", "#53405f", "#343c48", "#7c5b39"];
+const clothColors = [
+  "#6a3d32",
+  "#3e4a5e",
+  "#3f5646",
+  "#6d4c34",
+  "#53405f",
+  "#343c48",
+  "#7c5b39",
+];
 
 export function booksForSide(side: ShelfSide): BookPlacement[] {
   const books: BookPlacement[] = [];
@@ -126,11 +138,13 @@ export function booksForSide(side: ShelfSide): BookPlacement[] {
     for (let level = 0; level < side.levels; level += 1) {
       const shelfY = 0.4 + level * side.levelPitch;
       for (let book = 0; book < side.booksPerRow; book += 1) {
-        if (side.id === "right" && level === 0 && book > 2 && book < 5) continue;
+        if (side.id === "right" && level === 0 && book > 2 && book < 5)
+          continue;
         const height = 0.46 + ((book * 5 + level * 3 + row) % 7) * 0.028;
         const width = 0.068 + ((book * 3 + row) % 4) * 0.011;
         const along = (book / side.booksPerRow) * side.reach;
-        const tilt = book % 8 === 0 ? side.lean : book % 5 === 0 ? side.lean * 0.35 : 0;
+        const tilt =
+          book % 8 === 0 ? side.lean : book % 5 === 0 ? side.lean * 0.35 : 0;
         books.push({
           x: side.originX + side.xDirection * along,
           y: shelfY + height / 2,
@@ -139,7 +153,11 @@ export function booksForSide(side: ShelfSide): BookPlacement[] {
           width,
           height,
           depth: side.id === "left" ? 0.36 : 0.3,
-          color: clothColors[(book * 3 + level + row * (side.id === "left" ? 1 : 2)) % clothColors.length],
+          color:
+            clothColors[
+              (book * 3 + level + row * (side.id === "left" ? 1 : 2)) %
+                clothColors.length
+            ],
         });
       }
     }
@@ -180,7 +198,7 @@ export const inhabitedObjects: readonly PlacedObject[] = [
   },
 ];
 
-export const deskPose = { x: 0.46, z: 0.22, yaw: -0.16 };
+export const deskPose = { x: -0.36, z: 0.65, yaw: -0.09 };
 
 export const deskSupports = [
   { x: -1.05, z: 0.02, rotY: 0.02, width: 0.11, height: 0.46 },
@@ -188,8 +206,16 @@ export const deskSupports = [
 ] as const;
 
 export const shelfCases = [
-  { id: "left", position: [-3.75, 2.4, 3.4] as const, size: [1.75, 5.5, 8.8] as const },
-  { id: "right", position: [3.95, 1.95, 4.55] as const, size: [1.25, 4.15, 6.2] as const },
+  {
+    id: "left",
+    position: [-3.75, 2.4, 3.4] as const,
+    size: [1.75, 5.5, 8.8] as const,
+  },
+  {
+    id: "right",
+    position: [3.95, 1.95, 4.55] as const,
+    size: [1.25, 4.15, 6.2] as const,
+  },
 ];
 
 /** Local to the observatory window. Kept off the desk's x so the moon is not parked above it. */

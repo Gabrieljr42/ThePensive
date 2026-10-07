@@ -7,7 +7,7 @@ import { GutterScale } from "./GutterScale";
 
 export function TwinTomes() {
   const phase = useArchiveStore((s) => s.phase);
-  const mode = useArchiveStore((s) => s.mode);
+  const mode = useArchiveStore((s) => s.run?.mode ?? s.mode);
   const run = useArchiveStore((s) => s.run);
   const [mobileTab, setMobileTab] = useState<"rag" | "full">("rag");
 
@@ -25,7 +25,10 @@ export function TwinTomes() {
   const isCompare = mode === "compare" && ragBranch && fullBranch;
 
   return (
-    <section aria-label="Archive Reading Tomes" className="relative z-20 w-full mt-2">
+    <section
+      aria-label="Archive Reading Tomes"
+      className="relative z-20 w-full mt-2"
+    >
       {/* Mobile Tab Toggle for Compare Mode */}
       {isCompare && (
         <div className="flex xl:hidden mb-4 p-1 rounded-xs bg-[#0b0e14]/90 border border-[#a88235]/30">
@@ -57,15 +60,18 @@ export function TwinTomes() {
       {/* Side-by-Side Twin Tomes with Dark Central Gutter */}
       <div className="flex flex-col xl:flex-row items-stretch gap-6">
         {/* Left / RAG Tome */}
-        {ragBranch && (isCompare ? (
-          <div className={`flex-1 ${mobileTab === "rag" ? "block" : "hidden xl:block"}`}>
-            <Tome branch={ragBranch} isRag={true} />
-          </div>
-        ) : mode === "rag" ? (
-          <div className="w-full max-w-4xl mx-auto">
-            <Tome branch={ragBranch} isRag={true} />
-          </div>
-        ) : null)}
+        {ragBranch &&
+          (isCompare ? (
+            <div
+              className={`flex-1 ${mobileTab === "rag" ? "block" : "hidden xl:block"}`}
+            >
+              <Tome branch={ragBranch} isRag={true} />
+            </div>
+          ) : mode === "rag" ? (
+            <div className="w-full max-w-4xl mx-auto">
+              <Tome branch={ragBranch} isRag={true} />
+            </div>
+          ) : null)}
 
         {/* Central Gutter Measurement Scale */}
         {isCompare && (
@@ -73,15 +79,18 @@ export function TwinTomes() {
         )}
 
         {/* Right / Full Context Tome */}
-        {fullBranch && (isCompare ? (
-          <div className={`flex-1 ${mobileTab === "full" ? "block" : "hidden xl:block"}`}>
-            <Tome branch={fullBranch} isRag={false} />
-          </div>
-        ) : mode === "full_context" ? (
-          <div className="w-full max-w-4xl mx-auto">
-            <Tome branch={fullBranch} isRag={false} />
-          </div>
-        ) : null)}
+        {fullBranch &&
+          (isCompare ? (
+            <div
+              className={`flex-1 ${mobileTab === "full" ? "block" : "hidden xl:block"}`}
+            >
+              <Tome branch={fullBranch} isRag={false} />
+            </div>
+          ) : mode === "full_context" ? (
+            <div className="w-full max-w-4xl mx-auto">
+              <Tome branch={fullBranch} isRag={false} />
+            </div>
+          ) : null)}
       </div>
     </section>
   );

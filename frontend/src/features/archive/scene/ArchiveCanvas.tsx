@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { CameraRig } from "./CameraRig";
@@ -17,7 +17,11 @@ import { useArchiveStore } from "../store";
 import { sceneUniforms } from "../uniforms";
 import { archiveFrameLoop, pixelRatioCap } from "../archiveBudget";
 import { deskPose } from "./sceneLayout";
-import { InhabitedAisle, WaxSpill } from "./Inhabited";
+import { PensieveBasin } from "./PensieveBasin";
+import { DeskInstruments } from "./DeskInstruments";
+import { ArchiveEnvironment } from "./ArchiveEnvironment";
+import { SceneRuntime } from "./SceneRuntime";
+import { presentMemories } from "../presentation";
 
 function useDocumentHidden() {
   const [hidden, setHidden] = useState(false);
@@ -40,25 +44,25 @@ function ArchiveLights() {
     const revealed = 1 - env.darkness * 0.45;
     const hush = 1 - env.hush * 0.5;
     if (moonRef.current) {
-      const cool = 1.15 + (1 - env.warmth) * 0.7;
+      const cool = 2.1 + (1 - env.warmth) * 0.35;
       moonRef.current.intensity = cool * revealed * hush;
       moonRef.current.color.set(env.warmth > 0.55 ? "#d5e2ea" : "#c3dff0");
     }
     if (warmRef.current) {
-      warmRef.current.intensity = (0.18 + env.warmth * 1.15) * revealed * hush;
+      warmRef.current.intensity = (1.1 + env.warmth * 0.8) * revealed * hush;
     }
   });
 
   return (
     <>
-      <hemisphereLight args={["#8eacbf", "#2a1c14", 0.72]} />
+      <hemisphereLight args={["#94a9b9", "#594334", 1.25]} />
       <directionalLight
         ref={moonRef}
-        position={[1.6, 5.2, -3.4]}
+        position={[-2.5, 5.2, 1.8]}
         color="#c3dff0"
-        intensity={1.5}
+        intensity={2.3}
         castShadow={tier === "high"}
-        shadow-mapSize={[512, 512]}
+        shadow-mapSize={[1024, 1024]}
         shadow-bias={-0.0004}
         shadow-camera-near={0.5}
         shadow-camera-far={28}
@@ -69,10 +73,10 @@ function ArchiveLights() {
       />
       <pointLight
         ref={warmRef}
-        position={[-1.05, 1.15, 0.55]}
-        color="#ffb15a"
-        intensity={0.35}
-        distance={7.5}
+        position={[-1.7, 2.6, 1.5]}
+        color="#e6ac68"
+        intensity={1.9}
+        distance={9}
         decay={2}
       />
     </>
@@ -97,9 +101,16 @@ type FrameStats = {
   floorReversals: number;
   shelfRange: number;
   shelfReversals: number;
+  drawCalls: number;
+  triangles: number;
+  surface: { left: number; right: number; top: number; bottom: number } | null;
 };
 
-function foregroundFloorSpan(pixels: Uint8Array, width: number, height: number) {
+function foregroundFloorSpan(
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+) {
   const row = Math.min(height - 1, Math.max(0, Math.floor(height * 0.75)));
   const glRow = height - 1 - row;
   const x0 = Math.floor(width * 0.02);
@@ -107,7 +118,9 @@ function foregroundFloorSpan(pixels: Uint8Array, width: number, height: number) 
   const samples: number[] = [];
   for (let x = x0; x < x1; x += 2) {
     const i = (glRow * width + x) * 4;
-    samples.push(pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722);
+    samples.push(
+      pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722,
+    );
   }
   const count = samples.length;
   if (count < 8) return { range: 0, reversals: 0 };
@@ -124,7 +137,9 @@ function foregroundFloorSpan(pixels: Uint8Array, width: number, height: number) 
   const denom = count * sumXX - sumX * sumX;
   const slope = denom === 0 ? 0 : (count * sumXY - sumX * sumY) / denom;
   const intercept = (sumY - slope * sumX) / count;
-  const residual = samples.map((sample, index) => sample - (intercept + slope * index));
+  const residual = samples.map(
+    (sample, index) => sample - (intercept + slope * index),
+  );
   let min = residual[0];
   let max = residual[0];
   const buckets: number[] = [];
@@ -160,7 +175,9 @@ function shelfClothSpan(pixels: Uint8Array, width: number, height: number) {
     for (let imageY = y0; imageY < y1; imageY += 3) {
       const glY = height - 1 - imageY;
       const i = (glY * width + x) * 4;
-      samples.push(pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722);
+      samples.push(
+        pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722,
+      );
     }
     const count = samples.length;
     if (count < 8) continue;
@@ -177,7 +194,9 @@ function shelfClothSpan(pixels: Uint8Array, width: number, height: number) {
     const denom = count * sumXX - sumX * sumX;
     const slope = denom === 0 ? 0 : (count * sumXY - sumX * sumY) / denom;
     const intercept = (sumY - slope * sumX) / count;
-    const residual = samples.map((sample, index) => sample - (intercept + slope * index));
+    const residual = samples.map(
+      (sample, index) => sample - (intercept + slope * index),
+    );
     let min = residual[0];
     let max = residual[0];
     for (const value of residual) {
@@ -205,16 +224,32 @@ function shelfClothSpan(pixels: Uint8Array, width: number, height: number) {
   return best;
 }
 
-function publishFrameReader(gl: THREE.WebGLRenderer) {
-  const host = window as Window & { __pensieveArchive?: { readStats: () => FrameStats } };
+function publishFrameReader(
+  gl: THREE.WebGLRenderer,
+  scene: THREE.Scene,
+  camera: THREE.Camera,
+) {
+  const host = window as Window & {
+    __pensieveArchive?: { readStats: () => FrameStats };
+  };
   host.__pensieveArchive = {
     readStats() {
+      // Explicit laboratory read: production rendering does not preserve the framebuffer.
+      gl.render(scene, camera);
       const drawing = gl.getContext();
       const canvas = gl.domElement;
       const width = canvas.width;
       const height = canvas.height;
       const pixels = new Uint8Array(width * height * 4);
-      drawing.readPixels(0, 0, width, height, drawing.RGBA, drawing.UNSIGNED_BYTE, pixels);
+      drawing.readPixels(
+        0,
+        0,
+        width,
+        height,
+        drawing.RGBA,
+        drawing.UNSIGNED_BYTE,
+        pixels,
+      );
       const stride = 8;
       let minLum = 255;
       let maxLum = 0;
@@ -230,7 +265,10 @@ function publishFrameReader(gl: THREE.WebGLRenderer) {
       for (let y = 0; y < height; y += stride) {
         for (let x = 0; x < width; x += stride) {
           const i = (y * width + x) * 4;
-          const lum = pixels[i] * 0.2126 + pixels[i + 1] * 0.7152 + pixels[i + 2] * 0.0722;
+          const lum =
+            pixels[i] * 0.2126 +
+            pixels[i + 1] * 0.7152 +
+            pixels[i + 2] * 0.0722;
           minLum = Math.min(minLum, lum);
           maxLum = Math.max(maxLum, lum);
           sum += lum;
@@ -253,6 +291,23 @@ function publishFrameReader(gl: THREE.WebGLRenderer) {
       const spanY = maxY > minY ? (maxY - minY) / height : 0;
       const floor = foregroundFloorSpan(pixels, width, height);
       const shelf = shelfClothSpan(pixels, width, height);
+      const surfaceMesh = scene.getObjectByName("MemorySurface");
+      const corners = surfaceMesh
+        ? [
+            [-1.012, -1.012],
+            [1.012, -1.012],
+            [1.012, 1.012],
+            [-1.012, 1.012],
+          ].map(([x, y]) => {
+            const p = new THREE.Vector3(x, y, 0)
+              .applyMatrix4(surfaceMesh.matrixWorld)
+              .project(camera);
+            return {
+              x: ((p.x + 1) * canvas.clientWidth) / 2,
+              y: ((1 - p.y) * canvas.clientHeight) / 2,
+            };
+          })
+        : [];
       return {
         width,
         height,
@@ -271,72 +326,104 @@ function publishFrameReader(gl: THREE.WebGLRenderer) {
         floorReversals: floor.reversals,
         shelfRange: shelf.range,
         shelfReversals: shelf.reversals,
+        drawCalls: gl.info.render.calls,
+        triangles: gl.info.render.triangles,
+        surface: corners.length
+          ? {
+              left: Math.min(...corners.map((p) => p.x)),
+              right: Math.max(...corners.map((p) => p.x)),
+              top: Math.min(...corners.map((p) => p.y)),
+              bottom: Math.max(...corners.map((p) => p.y)),
+            }
+          : null,
       };
     },
   };
 }
 
-export function ArchiveCanvas() {
+export function ArchiveCanvas({
+  onUnavailable,
+}: {
+  onUnavailable?: () => void;
+}) {
   const qualityTier = useArchiveStore((s) => s.qualityTier);
   const reducedMotion = useArchiveStore((s) => s.reducedMotion);
-  const markSceneMounted = useArchiveStore((s) => s.markSceneMounted);
+  const quietReading = useArchiveStore((s) => s.quietReading);
+  const lightMode = useArchiveStore((s) => s.lightMode);
+  const run = useArchiveStore((s) => s.run);
+  const mounted = useArchiveStore((s) => s.qualityGate.mounted);
   const hidden = useDocumentHidden();
   const [entryTier] = useState(qualityTier);
   const cap = pixelRatioCap();
   const frameloop = archiveFrameLoop({
     hidden,
-    reducedMotion,
-    tier: qualityTier,
+    reducedMotion: reducedMotion || quietReading,
+    tier: lightMode ? "low" : qualityTier,
   });
 
   return (
     <div
-      className="absolute inset-0 h-full w-full overflow-hidden bg-[#070b10]"
+      className="fixed inset-0 h-dvh w-full overflow-hidden bg-[#0b1018]"
       data-archive-scene
       data-quality-tier={qualityTier}
       data-entry-tier={entryTier}
       data-frameloop={frameloop}
       data-pixel-cap={cap}
+      data-memory-count={
+        presentMemories(run).filter((node) => node.selected).length
+      }
+      aria-hidden="true"
+      style={{ opacity: mounted ? 1 : 0, transition: "opacity .4s" }}
     >
       <Canvas
-        shadows={qualityTier === "high" && !reducedMotion}
+        shadows={qualityTier === "high" && !reducedMotion && !lightMode ? "percentage" : false}
         frameloop={frameloop}
         dpr={[1, cap]}
-        camera={{ position: [0, 1.6, 6.8], fov: 46 }}
+        camera={{ position: [0.1, 2.05, 6.9], fov: 44 }}
         gl={{
-          antialias: false,
+          antialias: true,
           alpha: false,
           stencil: false,
           powerPreference: "high-performance",
-          preserveDrawingBuffer: true,
+          preserveDrawingBuffer: false,
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.18,
+          toneMappingExposure: 1.12,
         }}
-        onCreated={({ gl }) => {
-          gl.setClearColor("#070b10", 1);
+        onCreated={({ gl, scene, camera }) => {
+          gl.shadowMap.type = THREE.PCFShadowMap;
+          gl.setClearColor("#0b1018", 1);
           gl.debug.checkShaderErrors = true;
-          publishFrameReader(gl);
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => markSceneMounted());
-          });
+          publishFrameReader(gl, scene, camera);
+          gl.domElement.addEventListener(
+            "webglcontextlost",
+            () => onUnavailable?.(),
+            { once: true },
+          );
         }}
       >
-        <fogExp2 attach="fog" args={["#0a1016", 0.036]} />
-        <CameraRig />
-        <ArchiveLights />
-        <Stacks />
-        <ObservatoryWindow />
-        <Moonbeam />
-        <Dust />
-        <InhabitedAisle />
-        <group position={[deskPose.x, 0, deskPose.z]} rotation={[0, deskPose.yaw, 0]}>
-          <Desk />
-          <WaxSpill />
-          <VolumesRack />
-          <Candle />
-        </group>
-        <RetrievalNodes />
-        <PageBloom />
+        <Suspense fallback={null}>
+          <fogExp2 attach="fog" args={["#151c25", 0.028]} />
+          <ArchiveEnvironment />
+          <SceneRuntime />
+          <CameraRig />
+          <ArchiveLights />
+          <Stacks />
+          <ObservatoryWindow />
+          <Moonbeam />
+          <Dust />
+          <PensieveBasin />
+          <group
+            position={[deskPose.x, 0, deskPose.z]}
+            rotation={[0, deskPose.yaw, 0]}
+          >
+            <Desk />
+            <VolumesRack />
+            <Candle />
+            <DeskInstruments />
+          </group>
+          <RetrievalNodes />
+          <PageBloom />
+        </Suspense>
       </Canvas>
     </div>
   );

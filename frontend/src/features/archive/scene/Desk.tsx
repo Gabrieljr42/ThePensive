@@ -1,94 +1,47 @@
 "use client";
 
-import { NoisyStandardMaterial } from "./NoisyStandardMaterial";
-import { useArchiveStore } from "../store";
-import { deskSupports, materialRoles } from "./sceneLayout";
+import { CraftedBox } from "./CraftedBox";
+import { ArchiveMaterial } from "./ArchiveMaterial";
 
 export function Desk() {
-  const shadows = useArchiveStore((s) => s.qualityTier) === "high";
-  const wood = materialRoles.wood;
-
   return (
-    <group position={[0, 0.48, 0.2]}>
-      <mesh position={[0.04, 0, 0.02]} castShadow={shadows} receiveShadow>
-        <boxGeometry args={[3.55, 0.07, 1.62]} />
-        <NoisyStandardMaterial
-          color={wood.color}
-          roughness={wood.roughness}
-          metalness={wood.metalness}
-          repeat={wood.repeat}
-          offset={wood.offset}
-          strength={wood.strength}
-        />
-      </mesh>
-      <mesh position={[-1.55, 0.01, 0.18]} rotation={[0, 0.04, 0]} castShadow={shadows} receiveShadow>
-        <boxGeometry args={[0.72, 0.05, 0.48]} />
-        <NoisyStandardMaterial
-          color="#5c3d28"
-          roughness={0.8}
-          metalness={0.02}
-          repeat={[6, 1.2]}
-          offset={[0.62, 0.2]}
-          strength={0.42}
-          bump={false}
-        />
-      </mesh>
-
-      {deskSupports.map((support) => (
-        <mesh
-          key={`${support.x}-${support.z}`}
-          position={[support.x, -0.24, support.z]}
-          rotation={[0, support.rotY, 0]}
-          castShadow={shadows}
-        >
-          <boxGeometry args={[support.width, support.height, 1.15]} />
-          <NoisyStandardMaterial
-            color="#4e3424"
-            roughness={0.82}
-            metalness={0.02}
-            repeat={[1.2, 4]}
-            offset={[0.33, 0.4]}
-            strength={0.3}
-            bump={false}
-          />
-        </mesh>
+    <group position={[0, 0.72, 0.35]}>
+      <CraftedBox size={[3.35, 0.12, 1.3]} radius={0.045} castShadow>
+        <ArchiveMaterial role="walnut" repeat={[2, 2]} />
+      </CraftedBox>
+      <CraftedBox
+        size={[3.42, 0.028, 1.36]}
+        position={[0, -0.04, 0]}
+        radius={0.015}
+      >
+        <ArchiveMaterial role="walnut" color="#4f3528" />
+      </CraftedBox>
+      <CraftedBox size={[2.9, 0.14, 0.045]} position={[0, -0.15, 0.54]}>
+        <ArchiveMaterial role="walnut" color="#52372a" />
+      </CraftedBox>
+      {[-1.38, 1.38].map((x) => (
+        <group key={x} position={[x, -0.39, 0]}>
+          <CraftedBox size={[0.17, 0.63, 0.86]} radius={0.035} castShadow>
+            <ArchiveMaterial role="walnut" color="#503527" repeat={[1, 2]} />
+          </CraftedBox>
+          <CraftedBox size={[0.28, 0.06, 1]} position={[0, -0.29, 0]}>
+            <ArchiveMaterial role="walnut" color="#503527" />
+          </CraftedBox>
+        </group>
       ))}
-
-      <mesh position={[-1.15, 0.05, 0]} castShadow={shadows} receiveShadow>
-        <boxGeometry args={[1.15, 0.035, 0.45]} />
-        <NoisyStandardMaterial
-          color={wood.color}
-          roughness={0.76}
-          metalness={0.03}
-          repeat={[4, 1.2]}
-          offset={wood.offset}
-          strength={0.34}
-          bump={false}
-        />
-      </mesh>
-      <mesh position={[-1.71, 0.16, 0]} castShadow={shadows}>
-        <boxGeometry args={[0.03, 0.22, 0.44]} />
-        <NoisyStandardMaterial
-          color="#4a3428"
-          roughness={0.7}
-          metalness={0.04}
-          repeat={[1, 2]}
-          offset={[0.5, 0.2]}
-          strength={0.24}
-          bump={false}
-        />
-      </mesh>
-      <mesh position={[-0.59, 0.16, 0.02]} rotation={[0, 0.08, 0]} castShadow={shadows}>
-        <boxGeometry args={[0.035, 0.2, 0.4]} />
-        <NoisyStandardMaterial
-          color="#4a3428"
-          roughness={0.7}
-          metalness={0.04}
-          repeat={[1, 2]}
-          offset={[0.15, 0.5]}
-          strength={0.24}
-          bump={false}
-        />
+      <CraftedBox size={[2.8, 0.085, 0.085]} position={[0, -0.57, -0.2]}>
+        <ArchiveMaterial role="walnut" color="#503527" />
+      </CraftedBox>
+      <CraftedBox
+        size={[0.95, 0.012, 0.65]}
+        position={[0.38, 0.07, 0.03]}
+        rotation={[0, -0.12, 0]}
+      >
+        <ArchiveMaterial role="paper" color="#d6c9ab" />
+      </CraftedBox>
+      <mesh position={[0.89, 0.083, 0.22]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.044, 20]} />
+        <meshStandardMaterial color="#702a27" roughness={0.46} />
       </mesh>
     </group>
   );

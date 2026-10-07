@@ -1,0 +1,4 @@
+firstFrameTier=mid
+pixelRatio=1
+floorReversals=5
+shelfReversals=8

@@ -25,21 +25,17 @@ export function noteReducedMotion(
   state: ArchiveQualityState,
   reducedMotion: boolean,
 ): ArchiveQualityState {
-  if (!reducedMotion) return { ...state, reducedMotion: false };
-  return { ...state, reducedMotion: true, tier: "low", pendingHigh: false };
+  return { ...state, reducedMotion };
 }
 
 /**
  * A detected high tier waits until the first conservative frame has mounted.
- * Reduced motion and an explicit low/mid result never promote into high.
+ * Motion preferences affect animation independently of material quality.
  */
 export function noteDetectedTier(
   state: ArchiveQualityState,
   detected: ArchiveTier,
 ): ArchiveQualityState {
-  if (state.reducedMotion) {
-    return { ...state, tier: "low", pendingHigh: false };
-  }
   if (detected !== "high") {
     return { ...state, tier: detected, pendingHigh: false };
   }
@@ -49,10 +45,9 @@ export function noteDetectedTier(
   return { ...state, tier: "high", pendingHigh: false };
 }
 
-export function noteSceneMounted(state: ArchiveQualityState): ArchiveQualityState {
-  if (state.reducedMotion) {
-    return { ...state, mounted: true, tier: "low", pendingHigh: false };
-  }
+export function noteSceneMounted(
+  state: ArchiveQualityState,
+): ArchiveQualityState {
   if (state.pendingHigh) {
     return { ...state, mounted: true, tier: "high", pendingHigh: false };
   }

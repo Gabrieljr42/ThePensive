@@ -5,9 +5,6 @@ export type QualityTier = "high" | "mid" | "low";
 export async function detectArchiveQualityTier(): Promise<QualityTier> {
   if (typeof window === "undefined") return "mid";
 
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (prefersReducedMotion) return "low";
-
   const isMobile = window.innerWidth < 768;
 
   try {

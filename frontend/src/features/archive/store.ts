@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { EvidenceResponse, Mode } from "@/lib/contracts";
 import type { ArchiveRun, ScenePhase, Volume } from "./model";
 import { ARCHIVE_VOLUMES } from "./mock/volumes";
-import { MARAUDERS_MAP_QUESTION, MARAUDERS_MAP_RUN } from "./mock/marauders-map";
+import { MARAUDERS_MAP_QUESTION } from "./mock/marauders-map";
 import {
   createArchiveQualityState,
   noteDetectedTier,
@@ -28,6 +28,10 @@ interface ArchiveState {
   qualityTier: ArchiveTier;
   qualityGate: ArchiveQualityState;
   isBusy: boolean;
+  requestId: number;
+  error: string | null;
+  quietReading: boolean;
+  lightMode: boolean;
 
   // Actions
   setPhase: (phase: ScenePhase) => void;
@@ -45,6 +49,12 @@ interface ArchiveState {
   markSceneMounted: () => void;
   setIsBusy: (busy: boolean) => void;
   resetToDesk: () => void;
+  beginInquiry: () => number;
+  completeInquiry: (id: number, run: ArchiveRun) => boolean;
+  failInquiry: (id: number, message: string) => void;
+  cancelInquiry: () => void;
+  setQuietReading: (quiet: boolean) => void;
+  setLightMode: (light: boolean) => void;
 }
 
 export const useArchiveStore = create<ArchiveState>((set) => ({
@@ -55,7 +65,7 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
   mode: "compare",
   question: MARAUDERS_MAP_QUESTION,
   isCustomQuestion: false,
-  run: MARAUDERS_MAP_RUN,
+  run: null,
   activeCitationId: null,
   pinnedCitationId: null,
   activeEvidence: null,
@@ -63,6 +73,10 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
   qualityTier: "mid",
   qualityGate: createArchiveQualityState(),
   isBusy: false,
+  requestId: 0,
+  error: null,
+  quietReading: false,
+  lightMode: false,
 
   setPhase: (phase) => set({ phase }),
 
@@ -72,7 +86,9 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
       if (exists) {
         // Keep at least one volume selected
         if (state.selectedVolumeIds.length === 1) return state;
-        return { selectedVolumeIds: state.selectedVolumeIds.filter((v) => v !== id) };
+        return {
+          selectedVolumeIds: state.selectedVolumeIds.filter((v) => v !== id),
+        };
       }
       return { selectedVolumeIds: [...state.selectedVolumeIds, id] };
     }),
@@ -138,12 +154,57 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
 
   setIsBusy: (isBusy) => set({ isBusy }),
 
+  beginInquiry: () => {
+    let id = 0;
+    set((state) => {
+      id = state.requestId + 1;
+      return {
+        requestId: id,
+        isBusy: true,
+        error: null,
+        run: null,
+        activeCitationId: null,
+        pinnedCitationId: null,
+        activeEvidence: null,
+        phase: "casting",
+      };
+    });
+    return id;
+  },
+  completeInquiry: (id, run) => {
+    let accepted = false;
+    set((state) => {
+      if (state.requestId !== id) return state;
+      accepted = true;
+      return { run, isBusy: false, phase: "reading", error: null };
+    });
+    return accepted;
+  },
+  failInquiry: (id, error) =>
+    set((state) =>
+      state.requestId === id ? { isBusy: false, phase: "desk", error } : state,
+    ),
+  cancelInquiry: () =>
+    set((state) => ({
+      requestId: state.requestId + 1,
+      isBusy: false,
+      phase: "desk",
+      error: null,
+      run: null,
+      activeCitationId: null,
+      pinnedCitationId: null,
+      activeEvidence: null,
+    })),
+  setQuietReading: (quietReading) => set({ quietReading }),
+  setLightMode: (lightMode) => set({ lightMode }),
   resetToDesk: () =>
-    set({
+    set((state) => ({
+      requestId: state.requestId + 1,
       phase: "desk",
       activeCitationId: null,
       pinnedCitationId: null,
       activeEvidence: null,
       isBusy: false,
-    }),
+      error: null,
+    })),
 }));

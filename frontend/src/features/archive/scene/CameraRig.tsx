@@ -8,7 +8,7 @@ import { globalCameraRef } from "../threads/ThreadLayer";
 import { useArchiveStore } from "../store";
 
 export function CameraRig() {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 });
   const lookTarget = useRef(
     new THREE.Vector3(
@@ -18,7 +18,11 @@ export function CameraRig() {
     ),
   );
   const currentPos = useRef(
-    new THREE.Vector3(sceneUniforms.camera.x, sceneUniforms.camera.y, sceneUniforms.camera.z),
+    new THREE.Vector3(
+      sceneUniforms.camera.x,
+      sceneUniforms.camera.y,
+      sceneUniforms.camera.z,
+    ),
   );
   const reducedMotion = useArchiveStore((s) => s.reducedMotion);
   const tier = useArchiveStore((s) => s.qualityTier);
@@ -27,11 +31,18 @@ export function CameraRig() {
     globalCameraRef.current = camera;
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (reducedMotion) return;
+      if (
+        reducedMotion ||
+        e.buttons ||
+        window.matchMedia("(pointer: coarse)").matches ||
+        useArchiveStore.getState().quietReading ||
+        useArchiveStore.getState().lightMode
+      )
+        return;
       const x = (e.clientX / window.innerWidth) * 2 - 1;
       const y = -(e.clientY / window.innerHeight) * 2 + 1;
-      mouseRef.current.targetX = x * 0.18;
-      mouseRef.current.targetY = y * 0.12;
+      mouseRef.current.targetX = x * 0.065;
+      mouseRef.current.targetY = y * 0.035;
     };
 
     window.addEventListener("mousemove", handleMouseMove, { passive: true });
@@ -39,14 +50,23 @@ export function CameraRig() {
   }, [camera, reducedMotion]);
 
   useFrame((_, delta) => {
-    if (reducedMotion || tier === "low") {
+    const state = useArchiveStore.getState();
+    const mobile = size.width < 700;
+    const shiftX = mobile ? 0.6 : 0;
+    const shiftZ = mobile ? 1.5 : 0;
+    if (
+      reducedMotion ||
+      tier === "low" ||
+      state.lightMode ||
+      state.quietReading
+    ) {
       camera.position.set(
-        sceneUniforms.camera.x,
+        sceneUniforms.camera.x + shiftX,
         sceneUniforms.camera.y,
-        sceneUniforms.camera.z,
+        sceneUniforms.camera.z + shiftZ,
       );
       camera.lookAt(
-        sceneUniforms.camera.targetX,
+        sceneUniforms.camera.targetX + shiftX,
         sceneUniforms.camera.targetY,
         sceneUniforms.camera.targetZ,
       );
@@ -58,11 +78,11 @@ export function CameraRig() {
     m.y += (m.targetY - m.y) * Math.min(delta * 4, 1);
 
     // Target positions from uniforms + parallax offset
-    const targetCamX = sceneUniforms.camera.x + m.x;
+    const targetCamX = sceneUniforms.camera.x + m.x + shiftX;
     const targetCamY = sceneUniforms.camera.y + m.y;
-    const targetCamZ = sceneUniforms.camera.z;
+    const targetCamZ = sceneUniforms.camera.z + shiftZ;
 
-    const targetLookX = sceneUniforms.camera.targetX + m.x * 0.4;
+    const targetLookX = sceneUniforms.camera.targetX + m.x * 0.4 + shiftX;
     const targetLookY = sceneUniforms.camera.targetY + m.y * 0.4;
     const targetLookZ = sceneUniforms.camera.targetZ;
 

@@ -8,8 +8,7 @@ import { useArchiveStore } from "../store";
 import { noiseOctavesForTier } from "./noise";
 import { sharedNoiseTexture } from "./noiseTexture";
 import { candleLightIntensity } from "./candleLight";
-import { NoisyStandardMaterial } from "./NoisyStandardMaterial";
-import { materialRoles } from "./sceneLayout";
+import { ArchiveMaterial } from "./ArchiveMaterial";
 
 const flameVertex = `
   varying vec2 vUv;
@@ -75,7 +74,11 @@ export function Candle() {
 
   useFrame((_, delta) => {
     const state = useArchiveStore.getState();
-    const still = state.reducedMotion || state.qualityTier === "low";
+    const still =
+      state.reducedMotion ||
+      state.qualityTier === "low" ||
+      state.quietReading ||
+      state.lightMode;
     const material = materialRef.current;
     if (material && !still) {
       material.uniforms.uTime.value += delta;
@@ -95,33 +98,38 @@ export function Candle() {
   });
 
   return (
-    <group position={[-1.15, 0.58, 0.35]}>
+    <group position={[-1.47, 0.85, 0.65]}>
       <mesh position={[0, -0.06, 0]} castShadow={false} receiveShadow>
         <cylinderGeometry args={[0.15, 0.18, 0.03, 20]} />
-        <NoisyStandardMaterial
-          color={materialRoles.metal.color}
-          roughness={materialRoles.metal.roughness}
-          metalness={materialRoles.metal.metalness}
-          repeat={materialRoles.metal.repeat}
-          offset={materialRoles.metal.offset}
-          strength={materialRoles.metal.strength}
-          bump={false}
-        />
+        <ArchiveMaterial role="brass" />
       </mesh>
-      <mesh position={[0, 0.08, 0]} castShadow={false} receiveShadow>
-        <cylinderGeometry args={[0.045, 0.05, 0.24, 16]} />
-        <meshStandardMaterial color="#f0e2c4" roughness={0.62} metalness={0.02} />
+      <mesh position={[0, 0.13, 0]} castShadow={false} receiveShadow>
+        <cylinderGeometry args={[0.042, 0.05, 0.36, 20]} />
+        <meshStandardMaterial color="#e2cba4" roughness={0.72} />
       </mesh>
-      <mesh position={[0, 0.21, 0]}>
+      <mesh position={[0, 0.325, 0]}>
         <cylinderGeometry args={[0.004, 0.004, 0.025, 6]} />
         <meshBasicMaterial color="#1a1410" />
       </mesh>
-      <mesh ref={flameRef} position={[0, 0.28, 0]}>
+      {[0, 1, 2, 3].map((i) => (
+        <mesh
+          key={i}
+          position={[
+            Math.sin(i * 1.6) * 0.043,
+            0.22 - i * 0.018,
+            Math.cos(i * 1.6) * 0.043,
+          ]}
+        >
+          <capsuleGeometry args={[0.006, 0.05 + i * 0.009, 3, 6]} />
+          <meshStandardMaterial color="#d9c3a0" roughness={0.8} />
+        </mesh>
+      ))}
+      <mesh ref={flameRef} position={[0, 0.4, 0]}>
         <planeGeometry args={[0.11, 0.18]} />
       </mesh>
       <pointLight
         ref={lightRef}
-        position={[0, 0.3, 0]}
+        position={[0, 0.46, 0]}
         color="#ffb04a"
         intensity={candleLightIntensity({ darkness: 1, hush: 0, flicker: 1 })}
         distance={7.5}

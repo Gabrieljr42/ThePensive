@@ -9,13 +9,25 @@ interface GutterScaleProps {
 
 export function GutterScale({ ragBranch, fullBranch }: GutterScaleProps) {
   if (!ragBranch || !fullBranch) return null;
+  if (
+    ragBranch.metrics.input_tokens == null ||
+    fullBranch.metrics.input_tokens == null
+  )
+    return null;
 
-  const ragTokens = ragBranch.metrics.input_tokens || 1842;
-  const fullTokens = fullBranch.metrics.input_tokens || 107200;
-  const ragSec = ((ragBranch.metrics.latency_ms || 1480) / 1000).toFixed(2);
-  const fullSec = ((fullBranch.metrics.latency_ms || 11840) / 1000).toFixed(2);
-  const ragCost = (ragBranch.metrics.estimated_cost_usd || 0.0011).toFixed(4);
-  const fullCost = (fullBranch.metrics.estimated_cost_usd || 0.268).toFixed(3);
+  const ragTokens = ragBranch.metrics.input_tokens;
+  const fullTokens = fullBranch.metrics.input_tokens;
+  const ragLatency = ragBranch.metrics.latency_ms ?? 0;
+  const fullLatency = fullBranch.metrics.latency_ms ?? 0;
+  const ragSec = (ragLatency / 1000).toFixed(2);
+  const fullSec = (fullLatency / 1000).toFixed(2);
+  const ragPrice = ragBranch.metrics.estimated_cost_usd ?? 0;
+  const fullPrice = fullBranch.metrics.estimated_cost_usd ?? 0;
+  const ragCost = ragPrice.toFixed(4);
+  const fullCost = fullPrice.toFixed(3);
+  const ragLatencyShare =
+    (ragLatency / Math.max(1, ragLatency + fullLatency)) * 100;
+  const ragTokenShare = (ragTokens / Math.max(1, ragTokens + fullTokens)) * 100;
 
   return (
     <div
@@ -38,8 +50,14 @@ export function GutterScale({ ragBranch, fullBranch }: GutterScaleProps) {
           <span className="text-[#88c4e0]">{fullSec}s</span>
         </div>
         <div className="w-full h-1 bg-[#1a2330] rounded-full overflow-hidden flex">
-          <div className="h-full bg-[#f5b041]" style={{ width: "12%" }} />
-          <div className="h-full bg-[#88c4e0]" style={{ width: "88%" }} />
+          <div
+            className="h-full bg-[#f5b041]"
+            style={{ width: ragLatencyShare + "%" }}
+          />
+          <div
+            className="h-full bg-[#88c4e0]"
+            style={{ width: 100 - ragLatencyShare + "%" }}
+          />
         </div>
       </div>
 
@@ -47,15 +65,29 @@ export function GutterScale({ ragBranch, fullBranch }: GutterScaleProps) {
       <div className="flex flex-col items-center gap-1.5 w-full my-3">
         <span className="text-[9px] uppercase text-[#6d7d8c]">TOKENS</span>
         <div className="flex items-center justify-between w-full px-1">
-          <span className="text-[#f5b041]">{(ragTokens / 1000).toFixed(1)}k</span>
+          <span className="text-[#f5b041]">
+            {(ragTokens / 1000).toFixed(1)}k
+          </span>
           <span className="text-[#556370]">/</span>
-          <span className="text-[#88c4e0]">{Math.round(fullTokens / 1000)}k</span>
+          <span className="text-[#88c4e0]">
+            {Math.round(fullTokens / 1000)}k
+          </span>
         </div>
         <div className="w-full h-1 bg-[#1a2330] rounded-full overflow-hidden flex">
-          <div className="h-full bg-[#f5b041]" style={{ width: "2%" }} />
-          <div className="h-full bg-[#88c4e0]" style={{ width: "98%" }} />
+          <div
+            className="h-full bg-[#f5b041]"
+            style={{ width: ragTokenShare + "%" }}
+          />
+          <div
+            className="h-full bg-[#88c4e0]"
+            style={{ width: 100 - ragTokenShare + "%" }}
+          />
         </div>
-        <span className="text-[8px] text-[#8695a3]">~58× Attention Load</span>
+        <span className="text-[8px] text-[#b5bfc4]">
+          {ragTokens > 0
+            ? "~" + Math.round(fullTokens / ragTokens) + "× context size"
+            : "Context size"}
+        </span>
       </div>
 
       {/* Cost Scale */}
@@ -66,14 +98,20 @@ export function GutterScale({ ragBranch, fullBranch }: GutterScaleProps) {
           <span className="text-[#556370]">/</span>
           <span className="text-[#88c4e0]">${fullCost}</span>
         </div>
-        <span className="text-[8px] text-[#8695a3]">~243× Cost Multiple</span>
+        <span className="text-[8px] text-[#b5bfc4]">
+          {ragPrice > 0
+            ? "~" + Math.round(fullPrice / ragPrice) + "× illustrative cost"
+            : "Illustrative cost"}
+        </span>
       </div>
 
       {/* Ground Truth Citation Count */}
       <div className="flex flex-col items-center gap-1 pt-2 border-t border-[#8a671d]/20 w-full">
         <span className="text-[9px] text-[#cda857]">EVIDENCE</span>
         <span className="text-[11px] text-[#f0e5ce]">
-          <span className="text-[#f5b041]">3</span> / <span className="text-[#88c4e0]">4</span> Claims
+          <span className="text-[#f5b041]">{ragBranch.claims.length}</span> /{" "}
+          <span className="text-[#88c4e0]">{fullBranch.claims.length}</span>{" "}
+          Claims
         </span>
       </div>
     </div>

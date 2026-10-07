@@ -44,8 +44,38 @@ export function MethodAstrolabe() {
               key={m.id}
               role="radio"
               aria-checked={isSelected}
+              tabIndex={isSelected ? 0 : -1}
+              title={m.desc}
               disabled={isBusy}
               onClick={() => setMode(m.id)}
+              onKeyDown={(event) => {
+                const keys = [
+                  "ArrowLeft",
+                  "ArrowRight",
+                  "ArrowUp",
+                  "ArrowDown",
+                  "Home",
+                  "End",
+                ];
+                if (!keys.includes(event.key) || isBusy) return;
+                event.preventDefault();
+                const index = methods.findIndex((item) => item.id === m.id);
+                const next =
+                  event.key === "Home"
+                    ? 0
+                    : event.key === "End"
+                      ? methods.length - 1
+                      : (index +
+                          (event.key === "ArrowLeft" || event.key === "ArrowUp"
+                            ? -1
+                            : 1) +
+                          methods.length) %
+                        methods.length;
+                setMode(methods[next].id);
+                event.currentTarget.parentElement
+                  ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+                  [next]?.focus();
+              }}
               className={`group relative flex items-center gap-2 px-3.5 sm:px-5 py-2 rounded-xs font-mono text-xs tracking-wider transition-all duration-200 ${
                 isSelected
                   ? "bg-[#241c14] text-[#f3ead8] border border-[#8d7348]"
@@ -54,7 +84,9 @@ export function MethodAstrolabe() {
             >
               <span
                 className={`text-[11px] ${
-                  isSelected ? "text-[#d4af37]" : "text-[#5e6b77] group-hover:text-[#a8987b]"
+                  isSelected
+                    ? "text-[#d4af37]"
+                    : "text-[#5e6b77] group-hover:text-[#a8987b]"
                 }`}
               >
                 {m.icon}

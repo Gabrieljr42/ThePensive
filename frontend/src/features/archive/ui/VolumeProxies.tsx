@@ -8,6 +8,7 @@ export function VolumeProxies() {
   const selectedVolumeIds = useArchiveStore((s) => s.selectedVolumeIds);
   const hoveredVolumeId = useArchiveStore((s) => s.hoveredVolumeId);
   const toggleVolume = useArchiveStore((s) => s.toggleVolume);
+  const isBusy = useArchiveStore((s) => s.isBusy);
   const setHoveredVolume = useArchiveStore((s) => s.setHoveredVolume);
 
   if (phase === "dark" || phase === "threshold" || phase === "approaching") {
@@ -15,15 +16,12 @@ export function VolumeProxies() {
   }
 
   return (
-    <aside
-      aria-label="Archive Folio Selection"
-      className="relative z-20 w-full lg:w-auto"
-    >
+    <aside aria-label="Archive Folio Selection" className="folio-selection">
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between text-[11px] font-mono tracking-widest text-[#a8997f] uppercase">
           <span className="flex items-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#cda857]" />
-            Active Corpus ({selectedVolumeIds.length}/7 Selected)
+            Active Corpus ({selectedVolumeIds.length}/{volumes.length} Selected)
           </span>
           <span className="text-[10px] text-[#78848f] hidden sm:inline">
             Click book to summon
@@ -31,7 +29,7 @@ export function VolumeProxies() {
         </div>
 
         {/* Desktop & Mobile Responsive Folio Strip */}
-        <div className="flex lg:flex-col gap-1.5 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
+        <div className="folio-strip">
           {volumes.map((vol) => {
             const isSelected = selectedVolumeIds.includes(vol.id);
             const isHovered = hoveredVolumeId === vol.id;
@@ -42,9 +40,12 @@ export function VolumeProxies() {
                 type="button"
                 role="button"
                 aria-pressed={isSelected}
+                disabled={isBusy}
                 onClick={() => toggleVolume(vol.id)}
                 onMouseEnter={() => setHoveredVolume(vol.id)}
                 onMouseLeave={() => setHoveredVolume(null)}
+                onFocus={() => setHoveredVolume(vol.id)}
+                onBlur={() => setHoveredVolume(null)}
                 className={`group relative flex items-center gap-3 px-3.5 py-2.5 rounded-xs text-left transition-all duration-200 border whitespace-nowrap min-w-[210px] ${
                   isSelected
                     ? "bg-[#161c26]/90 border-[#cda857]/60 shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
@@ -73,7 +74,9 @@ export function VolumeProxies() {
                   </div>
                   <span
                     className={`font-reading text-sm truncate leading-snug ${
-                      isSelected ? "text-[#f6edd8] font-medium" : "text-[#c2b9a7]"
+                      isSelected
+                        ? "text-[#f6edd8] font-medium"
+                        : "text-[#c2b9a7]"
                     }`}
                   >
                     {vol.title}

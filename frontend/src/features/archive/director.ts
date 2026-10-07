@@ -2,251 +2,243 @@ import gsap from "gsap";
 import { sceneUniforms } from "./uniforms";
 import { useArchiveStore } from "./store";
 
-let activeMasterTimeline: gsap.core.Timeline | null = null;
+let activeTimeline: gsap.core.Timeline | null = null;
+const deskCamera = {
+  x: 0.05,
+  y: 2.6,
+  z: 5.4,
+  targetX: 0.28,
+  targetY: 0.15,
+  targetZ: -0.65,
+};
+const entryCamera = {
+  x: -0.2,
+  y: 2.4,
+  z: 5.8,
+  targetX: 0.1,
+  targetY: 0.85,
+  targetZ: -0.6,
+};
+
+function stop() {
+  activeTimeline?.kill();
+  activeTimeline = null;
+  for (const object of [
+    sceneUniforms.camera,
+    sceneUniforms.environment,
+    sceneUniforms.basin,
+    sceneUniforms.thread,
+    sceneUniforms.retrieval,
+  ])
+    gsap.killTweensOf(object);
+}
+function still() {
+  const s = useArchiveStore.getState();
+  return s.reducedMotion || s.quietReading || s.lightMode;
+}
+function focusDesk() {
+  requestAnimationFrame(() =>
+    document
+      .getElementById("archive-research-desk")
+      ?.focus({ preventScroll: true }),
+  );
+}
 
 export const archiveDirector = {
-  enterArchive(onComplete?: () => void) {
-    const store = useArchiveStore.getState();
-    if (store.reducedMotion) {
-      sceneUniforms.environment.darkness = 0;
-      sceneUniforms.environment.warmth = 0.85;
-      sceneUniforms.camera.x = 0;
-      sceneUniforms.camera.y = 1.05;
-      sceneUniforms.camera.z = 1.65;
-      sceneUniforms.camera.targetY = 0.55;
-      sceneUniforms.camera.targetZ = 0.2;
-      store.setPhase("desk");
-      onComplete?.();
+  isAnimating() {
+    return (
+      Boolean(activeTimeline?.isActive()) ||
+      gsap.isTweening(sceneUniforms.basin) ||
+      gsap.isTweening(sceneUniforms.environment) ||
+      gsap.isTweening(sceneUniforms.thread)
+    );
+  },
+  enterArchive() {
+    stop();
+    const s = useArchiveStore.getState();
+    if (still()) {
+      this.jumpToDesk();
       return;
     }
-
-    if (activeMasterTimeline) activeMasterTimeline.kill();
-
-    store.setPhase("approaching");
-    const tl = gsap.timeline({
-      onComplete: () => {
-        store.setPhase("desk");
-        onComplete?.();
+    s.setPhase("approaching");
+    activeTimeline = gsap.timeline({
+      onComplete() {
+        useArchiveStore.getState().setPhase("desk");
+        focusDesk();
       },
     });
-    activeMasterTimeline = tl;
-
-    tl.to(sceneUniforms.environment, {
+    activeTimeline
+      .to(
+        sceneUniforms.camera,
+        { ...deskCamera, duration: 0.85, ease: "power2.inOut" },
+        0,
+      )
+      .to(
+        sceneUniforms.environment,
+        { darkness: 0, warmth: 0.65, duration: 0.7 },
+        0,
+      );
+  },
+  jumpToDesk() {
+    stop();
+    Object.assign(sceneUniforms.camera, deskCamera);
+    Object.assign(sceneUniforms.environment, {
       darkness: 0,
-      duration: 1.2,
-      ease: "power2.out",
-    }, 0);
-
-    tl.to(sceneUniforms.environment, {
-      warmth: 0.85,
-      duration: 2.2,
-      ease: "power2.inOut",
-    }, 0.2);
-
-    tl.to(sceneUniforms.camera, {
-      x: 0,
-      y: 1.05,
-      z: 1.65,
-      targetX: 0,
-      targetY: 0.55,
-      targetZ: 0.2,
-      duration: 2.2,
-      ease: "power3.inOut",
-    }, 0);
+      warmth: 0.65,
+      hush: 0,
+    });
+    useArchiveStore.getState().resetToDesk();
+    focusDesk();
   },
-
-  castQuestion(onRetrieveComplete?: () => void) {
-    const store = useArchiveStore.getState();
-    if (store.reducedMotion) {
-      sceneUniforms.thread.castProgress = 1;
-      sceneUniforms.tomes.revealProgress = 1;
-      sceneUniforms.tomes.ragGlow = 1;
-      sceneUniforms.tomes.fullGlow = 1;
-      store.setPhase("reading");
-      store.setIsBusy(false);
-      onRetrieveComplete?.();
+  resetView() {
+    stop();
+    Object.assign(sceneUniforms.camera, entryCamera);
+    Object.assign(sceneUniforms.environment, {
+      darkness: 0.3,
+      warmth: 0.25,
+      hush: 0,
+    });
+    this.resetRitual();
+    useArchiveStore.getState().cancelInquiry();
+    useArchiveStore.getState().setPhase("threshold");
+    requestAnimationFrame(() =>
+      document.getElementById("archive-enter")?.focus(),
+    );
+  },
+  resetRitual() {
+    Object.assign(sceneUniforms.basin, {
+      energy: 0.12,
+      ripple: 0,
+      evidence: 0,
+    });
+    Object.assign(sceneUniforms.thread, {
+      castProgress: 0,
+      evidenceProgress: 0,
+    });
+    Object.assign(sceneUniforms.retrieval, {
+      active: false,
+      pageBloom: 0,
+      returnThreadsProgress: 0,
+    });
+    sceneUniforms.environment.hush = 0;
+  },
+  castQuestion() {
+    stop();
+    this.resetRitual();
+    if (still()) {
+      sceneUniforms.basin.energy = 0.55;
       return;
     }
-
-    if (activeMasterTimeline) activeMasterTimeline.kill();
-
-    store.setPhase("casting");
-    store.setIsBusy(true);
-
-    const tl = gsap.timeline({
-      onComplete: () => {
-        store.setPhase("reading");
-        store.setIsBusy(false);
-        onRetrieveComplete?.();
-      },
-    });
-    activeMasterTimeline = tl;
-
-    // 1. Thread travels from seal to book
-    sceneUniforms.thread.castProgress = 0;
-    tl.to(sceneUniforms.thread, {
-      castProgress: 1,
-      duration: 0.2,
-      ease: "power2.inOut",
-    }, 0);
-
-    // 2. Retrieval ceremony setup
-    tl.add(() => {
-      store.setPhase("retrieving");
-      sceneUniforms.retrieval.active = true;
-      sceneUniforms.retrieval.returnThreadsProgress = 0;
-      for (let i = 0; i < 8; i++) {
-        sceneUniforms.retrieval.candidateAwakening[i] = 0;
-        sceneUniforms.retrieval.candidateRerank[i] = 1;
-      }
-    }, 0.15);
-
-    // Camera elevates to reveal background stacks
-    tl.to(sceneUniforms.camera, {
-      y: 1.35,
-      z: 2.4,
-      targetY: 0.75,
-      duration: 0.25,
-      ease: "power2.out",
-    }, 0.15);
-
-    // Awaken 8 candidate nodes sequentially
-    for (let i = 0; i < 8; i++) {
-      tl.to(
-        sceneUniforms.retrieval.candidateAwakening,
-        {
-          [i]: 1,
-          duration: 0.12,
-          ease: "power1.out",
-        },
-        0.2 + i * 0.02,
+    activeTimeline = gsap.timeline();
+    activeTimeline
+      .to(sceneUniforms.thread, { castProgress: 1, duration: 0.45 }, 0)
+      .to(
+        sceneUniforms.basin,
+        { energy: 0.85, ripple: 1, duration: 0.8, ease: "power2.out" },
+        0,
       );
-    }
-
-    // Page bloom if Full Context or Compare
-    if (store.mode === "full_context" || store.mode === "compare") {
-      tl.to(
-        sceneUniforms.retrieval,
-        {
-          pageBloom: 1,
-          duration: 0.25,
-          ease: "power2.out",
-        },
-        0.25,
-      );
-    }
-
-    // Rerank phase: fade out 5 non-selected candidates
-    const discardedIndices = [3, 4, 5, 6, 7];
-    discardedIndices.forEach((idx) => {
-      tl.to(
-        sceneUniforms.retrieval.candidateRerank,
-        {
-          [idx]: 0.12,
-          duration: 0.15,
-          ease: "power2.inOut",
-        },
-        0.42,
-      );
-    });
-
-    // Return threads from surviving nodes
-    tl.to(
-      sceneUniforms.retrieval,
-      {
-        returnThreadsProgress: 1,
-        duration: 0.2,
-        ease: "power2.inOut",
-      },
-      0.52,
-    );
-
-    // Camera returns down to the reading desk
-    tl.to(
-      sceneUniforms.camera,
-      {
-        y: 1.05,
-        z: 1.65,
-        targetY: 0.55,
-        duration: 0.25,
-        ease: "power3.inOut",
-      },
-      0.62,
-    );
-
-    // Twin Tomes reveal
-    tl.to(
-      sceneUniforms.tomes,
-      {
-        revealProgress: 1,
-        ragGlow: 1,
-        fullGlow: 1,
-        duration: 0.2,
-        ease: "power2.out",
-      },
-      0.72,
-    );
   },
-
+  revealRun() {
+    const s = useArchiveStore.getState();
+    sceneUniforms.retrieval.active = true;
+    sceneUniforms.tomes.revealProgress = 1;
+    sceneUniforms.tomes.ragGlow = s.mode === "full_context" ? 0 : 1;
+    sceneUniforms.tomes.fullGlow = s.mode === "rag" ? 0 : 1;
+    sceneUniforms.retrieval.pageBloom = s.mode === "rag" ? 0 : 1;
+    if (still()) {
+      sceneUniforms.basin.energy = 0.16;
+      sceneUniforms.retrieval.returnThreadsProgress = 1;
+      return;
+    }
+    activeTimeline?.kill();
+    activeTimeline = gsap.timeline();
+    activeTimeline
+      .to(
+        sceneUniforms.retrieval,
+        { returnThreadsProgress: 1, duration: 0.65 },
+        0,
+      )
+      .to(sceneUniforms.basin, { energy: 0.65, duration: 0.25 }, 0)
+      .to(
+        sceneUniforms.basin,
+        { energy: 0.16, duration: 1.1, ease: "power2.out" },
+        0.25,
+      )
+      .to(sceneUniforms.thread, { castProgress: 0, duration: 0.3 }, 0.6);
+  },
+  stir() {
+    const s = useArchiveStore.getState();
+    if (s.isBusy) return;
+    window.dispatchEvent(new Event("pensieve-stir"));
+    gsap.killTweensOf(sceneUniforms.basin);
+    sceneUniforms.basin.ripple = 0;
+    if (still()) {
+      sceneUniforms.basin.ripple = 0.48;
+      s.setHoveredVolume(s.hoveredVolumeId);
+      return;
+    }
+    gsap.to(sceneUniforms.basin, {
+      ripple: 1,
+      energy: 0.4,
+      duration: 1,
+      ease: "power1.out",
+      onComplete: () => {
+        gsap.to(sceneUniforms.basin, { energy: 0.16, duration: 0.6 });
+      },
+    });
+    // Wake demand renderers after the uniform mutation.
+    s.setHoveredVolume(s.hoveredVolumeId);
+  },
+  cancelInquiry() {
+    stop();
+    this.resetRitual();
+    useArchiveStore.getState().cancelInquiry();
+  },
   inspectEvidence(citationId: string) {
-    const store = useArchiveStore.getState();
-    store.setActiveCitation(citationId);
-    store.setPhase("evidence");
-
-    if (store.reducedMotion) {
-      sceneUniforms.environment.hush = 0.75;
+    const s = useArchiveStore.getState();
+    s.setActiveCitation(citationId);
+    s.setPhase("evidence");
+    if (still()) {
+      sceneUniforms.environment.hush = 0.35;
+      sceneUniforms.basin.evidence = 1;
       sceneUniforms.thread.evidenceProgress = 1;
       return;
     }
-
-    gsap.to(sceneUniforms.environment, {
-      hush: 0.75,
-      duration: 0.35,
-      ease: "power2.out",
-    });
-
-    sceneUniforms.thread.evidenceProgress = 0;
-    gsap.to(sceneUniforms.thread, {
-      evidenceProgress: 1,
-      duration: 0.45,
-      ease: "power2.out",
-    });
+    gsap.to(sceneUniforms.environment, { hush: 0.35, duration: 0.3 });
+    gsap.to(sceneUniforms.basin, { evidence: 1, duration: 0.3 });
+    gsap.to(sceneUniforms.thread, { evidenceProgress: 1, duration: 0.35 });
   },
-
   releaseEvidence() {
-    const store = useArchiveStore.getState();
-    if (store.pinnedCitationId) return; // Keep if pinned
-
-    store.setActiveCitation(null);
-    store.setPhase("reading");
-
-    if (store.reducedMotion) {
+    const s = useArchiveStore.getState();
+    if (s.pinnedCitationId) return;
+    s.setActiveCitation(null);
+    s.setActiveEvidence(null);
+    s.setPhase(s.run ? "reading" : "desk");
+    if (still()) {
       sceneUniforms.environment.hush = 0;
+      sceneUniforms.basin.evidence = 0;
       sceneUniforms.thread.evidenceProgress = 0;
       return;
     }
-
-    gsap.to(sceneUniforms.environment, {
-      hush: 0,
-      duration: 0.3,
-      ease: "power2.out",
-    });
-
-    gsap.to(sceneUniforms.thread, {
-      evidenceProgress: 0,
-      duration: 0.25,
-      ease: "power2.in",
-    });
+    gsap.to(sceneUniforms.environment, { hush: 0, duration: 0.25 });
+    gsap.to(sceneUniforms.basin, { evidence: 0, duration: 0.25 });
+    gsap.to(sceneUniforms.thread, { evidenceProgress: 0, duration: 0.25 });
   },
-
-  jumpToDesk() {
-    const store = useArchiveStore.getState();
-    sceneUniforms.environment.darkness = 0;
-    sceneUniforms.environment.warmth = 0.85;
-    sceneUniforms.camera.x = 0;
-    sceneUniforms.camera.y = 1.05;
-    sceneUniforms.camera.z = 1.65;
-    sceneUniforms.camera.targetY = 0.55;
-    store.setPhase("desk");
+  settleMotion() {
+    stop();
+    const s = useArchiveStore.getState();
+    Object.assign(
+      sceneUniforms.camera,
+      ["dark", "threshold"].includes(s.phase) ? entryCamera : deskCamera,
+    );
+    if (s.phase === "approaching") {
+      s.setPhase("desk");
+      focusDesk();
+    }
+    sceneUniforms.basin.energy = 0.16;
+    sceneUniforms.basin.ripple = 0;
+  },
+  dispose() {
+    stop();
   },
 };

@@ -58,7 +58,9 @@ for (let y = 0; y < 12; y += 1) {
 const distinct = new Set(grid.map((sample) => sample.toFixed(4)));
 assert.ok(distinct.size > 8, `grid collapsed to ${distinct.size} values`);
 assert.ok(octaveDelta > 0.01, `extra octaves were a no-op (${octaveDelta})`);
-log(`grid distinct=${distinct.size} octaveDelta=${octaveDelta.toFixed(4)} min=${Math.min(...grid).toFixed(4)} max=${Math.max(...grid).toFixed(4)}`);
+log(
+  `grid distinct=${distinct.size} octaveDelta=${octaveDelta.toFixed(4)} min=${Math.min(...grid).toFixed(4)} max=${Math.max(...grid).toFixed(4)}`,
+);
 
 assert.strictEqual(noiseOctavesForTier("low"), 1);
 assert.ok(noiseOctavesForTier("mid") > noiseOctavesForTier("low"));
@@ -91,18 +93,28 @@ assert.strictEqual(gate.pendingHigh, true);
 gate = noteSceneMounted(gate);
 assert.strictEqual(gate.tier, "high");
 gate = noteReducedMotion(gate, true);
-assert.strictEqual(gate.tier, "low");
+assert.strictEqual(gate.tier, "high");
 gate = noteDetectedTier(gate, "high");
-assert.strictEqual(gate.tier, "low");
-log("tier gate keeps the first mounted frame off the high path and refuses reduced-motion upgrades");
+assert.strictEqual(gate.tier, "high");
+log(
+  "tier gate starts conservatively; motion preferences preserve material quality",
+);
 
 const dark = candleLightIntensity({ darkness: 1, hush: 0, flicker: 1 });
 const hushed = candleLightIntensity({ darkness: 0, hush: 1, flicker: 1 });
 const open = candleLightIntensity({ darkness: 0, hush: 0, flicker: 1 });
-assert.ok(dark < open * 0.5, `darkness should dim the candle, got ${dark} vs ${open}`);
-assert.ok(hushed < open, `hush should dim the candle, got ${hushed} vs ${open}`);
+assert.ok(
+  dark < open * 0.5,
+  `darkness should dim the candle, got ${dark} vs ${open}`,
+);
+assert.ok(
+  hushed < open,
+  `hush should dim the candle, got ${hushed} vs ${open}`,
+);
 assert.strictEqual(candleLightIntensity({ darkness: 1, hush: 0 }), dark);
-log(`candle still-light dark=${dark.toFixed(3)} hush=${hushed.toFixed(3)} open=${open.toFixed(3)}`);
+log(
+  `candle still-light dark=${dark.toFixed(3)} hush=${hushed.toFixed(3)} open=${open.toFixed(3)}`,
+);
 
 let fieldDelta = 0;
 for (let i = 0; i < 16; i += 1) {
@@ -120,8 +132,12 @@ const rightBooks = booksForSide(shelfSides[1]);
 assert.notEqual(leftBooks.length, rightBooks.length);
 assert.notEqual(shelfSides[0].zStep, shelfSides[1].zStep);
 assert.notEqual(shelfSides[0].levels, shelfSides[1].levels);
-const leftSpan = Math.max(...leftBooks.map((book) => book.z)) - Math.min(...leftBooks.map((book) => book.z));
-const rightSpan = Math.max(...rightBooks.map((book) => book.z)) - Math.min(...rightBooks.map((book) => book.z));
+const leftSpan =
+  Math.max(...leftBooks.map((book) => book.z)) -
+  Math.min(...leftBooks.map((book) => book.z));
+const rightSpan =
+  Math.max(...rightBooks.map((book) => book.z)) -
+  Math.min(...rightBooks.map((book) => book.z));
 assert.notEqual(Number(leftSpan.toFixed(2)), Number(rightSpan.toFixed(2)));
 assert.ok(inhabitedObjects.some(objectBreaksGrid));
 assert.notEqual(deskPose.yaw, 0);

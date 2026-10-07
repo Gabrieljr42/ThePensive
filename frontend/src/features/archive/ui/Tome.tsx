@@ -42,11 +42,11 @@ export function Tome({ branch, isRag }: TomeProps) {
       {/* Tome Header Inscription */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#8a671d]/20 pb-4">
         <div className="flex items-center gap-2 font-mono text-[11px] tracking-wider font-semibold">
-          <span className={headerGlow}>
-            {isRag ? "✦" : "☾"}
-          </span>
+          <span className={headerGlow}>{isRag ? "✦" : "☾"}</span>
           <span className="uppercase text-[#362f26]">
-            {isRag ? "The First Tome · Focused Retrieval" : "The Second Tome · Whole Corpus Attention"}
+            {isRag
+              ? "The First Tome · Focused Retrieval"
+              : "The Second Tome · Whole Corpus Attention"}
           </span>
         </div>
 
@@ -58,14 +58,18 @@ export function Tome({ branch, isRag }: TomeProps) {
               : "bg-[#b8dbeb]/50 text-[#1e4454] border border-[#6b9cb0]/30"
           }`}
         >
-          {isRag ? "3 Filtered Passages" : "Complete Volume Scope"}
+          {isRag
+            ? branch.context.selected_source_count + " Filtered Passages"
+            : branch.context.supplied_source_count > 0
+              ? "Prepared Volume Scope"
+              : "No prepared evidence"}
         </span>
       </div>
 
       {/* Answer Title */}
-      <h3 className="mt-6 font-display text-2xl sm:text-3xl text-[#1a1721] font-semibold tracking-tight">
+      <h2 className="mt-6 font-display text-2xl sm:text-3xl text-[#1a1721] font-semibold tracking-tight">
         {branch.answer_title}
-      </h3>
+      </h2>
 
       {/* Introduction */}
       <div className="mt-3 font-reading italic text-base sm:text-lg text-[#3e3745] leading-relaxed">
@@ -75,7 +79,10 @@ export function Tome({ branch, isRag }: TomeProps) {
       {/* Claims and Citations List */}
       <div className="mt-6 flex flex-col gap-4 border-t border-[#8a671d]/15 pt-5">
         {branch.claims.map((claim, idx) => (
-          <div key={claim.id} className="flex items-start gap-3 text-sm sm:text-base leading-relaxed">
+          <div
+            key={claim.id}
+            className="flex items-start gap-3 text-sm sm:text-base leading-relaxed"
+          >
             <span className="font-mono text-xs text-[#7d6c52] shrink-0 mt-1">
               0{idx + 1}
             </span>
@@ -99,13 +106,19 @@ export function Tome({ branch, isRag }: TomeProps) {
       {/* Technical Footnote */}
       <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-[#8a671d]/20 pt-3 text-[10px] font-mono text-[#665a46]">
         <span>
-          LATENCY: {((branch.metrics.latency_ms || 0) / 1000).toFixed(2)}s
+          LATENCY:{" "}
+          {branch.metrics.latency_ms == null
+            ? "—"
+            : (branch.metrics.latency_ms / 1000).toFixed(2) + "s"}
         </span>
         <span>
-          INPUT: {branch.metrics.input_tokens?.toLocaleString()} TOKENS
+          INPUT: {branch.metrics.input_tokens?.toLocaleString() ?? "—"} TOKENS
         </span>
         <span>
-          EST. COST: ${(branch.metrics.estimated_cost_usd || 0).toFixed(4)}
+          EST. COST:{" "}
+          {branch.metrics.estimated_cost_usd == null
+            ? "—"
+            : "$" + branch.metrics.estimated_cost_usd.toFixed(4)}
         </span>
       </div>
     </div>

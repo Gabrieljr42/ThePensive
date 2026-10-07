@@ -1,0 +1,38 @@
+{
+  "conditions": "Loopback production server, desktop Chrome, 1440x1000, no throttling. Event durations below the reporting threshold may be absent.",
+  "samples": [
+    {
+      "route": "/",
+      "lcp": 192,
+      "cls": 0.0013039353358892747,
+      "longestInteraction": 0,
+      "longTasks": [
+        63,
+        56,
+        87,
+        302
+      ],
+      "tier": "mid",
+      "entryTier": "mid",
+      "ratio": 1,
+      "pixelRatio": 1,
+      "clickDuration": 72
+    },
+    {
+      "route": "/?at=desk",
+      "lcp": 380,
+      "cls": 0,
+      "longestInteraction": 0,
+      "longTasks": [
+        64,
+        62,
+        284
+      ],
+      "tier": "mid",
+      "entryTier": "mid",
+      "ratio": 1,
+      "pixelRatio": 1,
+      "clickDuration": 136
+    }
+  ]
+}

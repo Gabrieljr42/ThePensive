@@ -5,7 +5,12 @@ import "./lab-window";
 
 function installLab(page: Page) {
   return page.addInitScript(() => {
-    const metrics = { lcp: 0, cls: 0, longestInteraction: 0, longTasks: [] as number[] };
+    const metrics = {
+      lcp: 0,
+      cls: 0,
+      longestInteraction: 0,
+      longTasks: [] as number[],
+    };
     window.pensieveLab = metrics;
     new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) metrics.lcp = entry.startTime;
@@ -23,7 +28,10 @@ function installLab(page: Page) {
         interactionId: number;
       })[]) {
         if (entry.interactionId) {
-          metrics.longestInteraction = Math.max(metrics.longestInteraction, entry.duration);
+          metrics.longestInteraction = Math.max(
+            metrics.longestInteraction,
+            entry.duration,
+          );
         }
       }
     }).observe({
@@ -33,7 +41,8 @@ function installLab(page: Page) {
     } as PerformanceObserverInit);
     try {
       new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) metrics.longTasks.push(entry.duration);
+        for (const entry of list.getEntries())
+          metrics.longTasks.push(entry.duration);
       }).observe({ type: "longtask", buffered: true });
     } catch {
       // Long task timing is required in the lab Chrome this suite runs.
@@ -42,8 +51,15 @@ function installLab(page: Page) {
 }
 
 async function settle(page: Page) {
+  await expect(page.locator("main")).toHaveAttribute(
+    "data-scene-status",
+    "ready",
+    { timeout: 15000 },
+  );
   await page.waitForSelector("canvas");
-  await page.waitForFunction(() => Boolean(window.__pensieveArchive?.readStats));
+  await page.waitForFunction(() =>
+    Boolean(window.__pensieveArchive?.readStats),
+  );
   await page.evaluate(
     () =>
       new Promise<void>((resolve) =>
@@ -87,7 +103,9 @@ test("archive entry stays inside the long-task and pixel-ratio budget", async ({
     await expect(control).toBeEnabled();
     await settle(page);
     const beforeClick = await readBudget(page);
-    expect(beforeClick.longTasks.every((duration) => duration <= 1000)).toBe(true);
+    expect(beforeClick.longTasks.every((duration) => duration <= 1000)).toBe(
+      true,
+    );
     expect(beforeClick.lcp).toBeGreaterThanOrEqual(0);
     expect(beforeClick.lcp).toBeLessThan(3500);
     expect(beforeClick.cls).toBeLessThanOrEqual(0.1);
@@ -102,7 +120,9 @@ test("archive entry stays inside the long-task and pixel-ratio budget", async ({
     });
     await control.click();
     await page.waitForTimeout(80);
-    const clickDuration = await page.evaluate(() => window.pensieveLab.longestInteraction);
+    const clickDuration = await page.evaluate(
+      () => window.pensieveLab.longestInteraction,
+    );
     expect(clickDuration).toBeLessThanOrEqual(200);
     samples.push({ route: route.path, ...beforeClick, clickDuration });
   }
@@ -130,15 +150,24 @@ test("reduced motion leaves the archive canvas still", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await installLab(page);
   await page.goto("/");
-  await expect(page.getByRole("button", { name: /Enter the Archive/i })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Enter the Archive/i }),
+  ).toBeVisible();
   await page.waitForFunction(
-    () => document.querySelector("[data-quality-tier]")?.getAttribute("data-quality-tier") === "low",
+    () =>
+      document
+        .querySelector("[data-archive-scene]")
+        ?.getAttribute("data-frameloop") === "demand",
   );
   await settle(page);
   await page.waitForTimeout(200);
-  const first = await page.evaluate(() => window.__pensieveArchive?.readStats().hash ?? null);
+  const first = await page.evaluate(
+    () => window.__pensieveArchive?.readStats().hash ?? null,
+  );
   await page.waitForTimeout(500);
-  const second = await page.evaluate(() => window.__pensieveArchive?.readStats().hash ?? null);
+  const second = await page.evaluate(
+    () => window.__pensieveArchive?.readStats().hash ?? null,
+  );
   expect(first).not.toBeNull();
   expect(second).toBe(first);
 

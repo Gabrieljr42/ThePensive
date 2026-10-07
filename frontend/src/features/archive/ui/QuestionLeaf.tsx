@@ -14,13 +14,17 @@ export function QuestionLeaf() {
   const setQuestion = useArchiveStore((s) => s.setQuestion);
   const selectedVolumeIds = useArchiveStore((s) => s.selectedVolumeIds);
   const mode = useArchiveStore((s) => s.mode);
-  const setRun = useArchiveStore((s) => s.setRun);
   const isBusy = useArchiveStore((s) => s.isBusy);
+  const error = useArchiveStore((s) => s.error);
 
   // Register anchor for the cast thread
   useEffect(() => {
     if (sealRef.current) {
-      return anchorRegistry.registerDom("question-seal", sealRef.current, "center");
+      return anchorRegistry.registerDom(
+        "question-seal",
+        sealRef.current,
+        "center",
+      );
     }
   }, []);
 
@@ -28,21 +32,30 @@ export function QuestionLeaf() {
     if (e) e.preventDefault();
     if (isBusy || !question.trim()) return;
 
-    // Trigger cast ceremony and resolve data concurrently
-    const runPromise = mockArchiveAdapter.createRun(
-      {
-        question: question.trim(),
-        mode,
-        corpus_id: "harry-potter-archive",
-        corpus_version: "vol-3-poa",
-      },
-      selectedVolumeIds,
-    );
+    const requestId = useArchiveStore.getState().beginInquiry();
+    archiveDirector.castQuestion();
+    try {
+      const activeRun = await mockArchiveAdapter.createRun(
+        {
+          question: question.trim(),
+          mode,
+          corpus_id: "harry-potter-archive",
+          corpus_version: "vol-3-poa",
+        },
+        selectedVolumeIds,
+      );
 
-    archiveDirector.castQuestion(async () => {
-      const activeRun = await runPromise;
-      setRun(activeRun);
-    });
+      if (useArchiveStore.getState().completeInquiry(requestId, activeRun))
+        archiveDirector.revealRun();
+    } catch {
+      useArchiveStore
+        .getState()
+        .failInquiry(
+          requestId,
+          "The archive could not complete this inquiry. Please try again.",
+        );
+      archiveDirector.resetRitual();
+    }
   };
 
   const suggestions = [
@@ -61,7 +74,7 @@ export function QuestionLeaf() {
   ];
 
   return (
-    <div className="relative w-full rounded-sm deckle-paper p-6 sm:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.6)]">
+    <div className="question-manuscript relative w-full deckle-paper">
       {/* Ancient Ledger Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#8a671d]/20 pb-3 font-mono text-[11px] tracking-wider text-[#63553e]">
         <span className="uppercase font-semibold">
@@ -72,7 +85,7 @@ export function QuestionLeaf() {
         </span>
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-4">
+      <form onSubmit={handleSubmit} className="mt-4" aria-busy={isBusy}>
         {/* Ruled Manuscript Writing Area */}
         <div className="relative">
           <label htmlFor="archive-inquiry-input" className="sr-only">
@@ -116,13 +129,23 @@ export function QuestionLeaf() {
         </div>
 
         {/* Action Bottom Row with Wax Seal Submit */}
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 pt-2">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 pt-2">
           <div className="flex items-center gap-2 text-xs font-mono text-[#6e5e49]">
             <span>SCOPE:</span>
             <span className="font-semibold text-[#3b3226]">
-              {selectedVolumeIds.length} Volume{selectedVolumeIds.length > 1 ? "s" : ""}
+              {selectedVolumeIds.length} Volume
+              {selectedVolumeIds.length > 1 ? "s" : ""}
             </span>
           </div>
+          {isBusy && (
+            <button
+              type="button"
+              className="cancel-inquiry"
+              onClick={() => archiveDirector.cancelInquiry()}
+            >
+              Cancel inquiry
+            </button>
+          )}
 
           {/* Red Wax Seal Submit Button */}
           <button
@@ -141,6 +164,11 @@ export function QuestionLeaf() {
           </button>
         </div>
       </form>
+      {error && (
+        <p role="alert" className="inquiry-error">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

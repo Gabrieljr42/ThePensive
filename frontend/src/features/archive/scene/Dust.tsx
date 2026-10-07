@@ -70,7 +70,10 @@ const dustFragment = `
 
 export function Dust() {
   const tier = useArchiveStore((s) => s.qualityTier);
-  const particleCount = dustBudget(tier);
+  const quiet = useArchiveStore(
+    (s) => s.quietReading || s.reducedMotion || s.lightMode,
+  );
+  const particleCount = quiet ? 0 : dustBudget(tier);
   const octaves = noiseOctavesForTier(tier);
   const noiseMap = useMemo(() => sharedNoiseTexture(octaves), [octaves]);
 

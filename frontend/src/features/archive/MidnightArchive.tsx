@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Component, useEffect, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useArchiveStore } from "./store";
 import { archiveDirector } from "./director";
 import { detectArchiveQualityTier } from "./quality";
@@ -13,143 +14,198 @@ import { QuestionLeaf } from "./ui/QuestionLeaf";
 import { RetrievalReadout } from "./ui/RetrievalReadout";
 import { TwinTomes } from "./ui/TwinTomes";
 import { EvidenceLeaf } from "./ui/EvidenceLeaf";
+import { RoomSettings } from "./ui/RoomSettings";
+import { sceneUniforms } from "./uniforms";
 
-// Dynamically import Canvas to ensure clean SSR hydration
 const ArchiveCanvas = dynamic(
   () => import("./scene/ArchiveCanvas").then((mod) => mod.ArchiveCanvas),
   { ssr: false },
 );
-
-interface MidnightArchiveProps {
-  initialPhase?: "dark" | "desk";
+class SceneBoundary extends Component<
+  { children: ReactNode; onUnavailable: () => void },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: Error) {
+    console.error("Pensieve room unavailable", error);
+    this.props.onUnavailable();
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
-export function MidnightArchive({ initialPhase = "dark" }: MidnightArchiveProps) {
+export function MidnightArchive({
+  initialPhase = "dark",
+}: {
+  initialPhase?: "dark" | "desk";
+}) {
   const phase = useArchiveStore((s) => s.phase);
-  const setQualityTier = useArchiveStore((s) => s.setQualityTier);
-  const setReducedMotion = useArchiveStore((s) => s.setReducedMotion);
+  const ready = useArchiveStore((s) => s.qualityGate.mounted);
+  const quiet = useArchiveStore((s) => s.quietReading);
+  const reduced = useArchiveStore((s) => s.reducedMotion);
   const [sceneReady, setSceneReady] = useState(false);
-
+  const [unavailable, setUnavailable] = useState(false);
+  const atDesk = !["dark", "threshold", "approaching"].includes(phase);
   useEffect(() => {
     let cancelled = false;
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mediaQuery.matches);
-
-    const handleMotionChange = (event: MediaQueryListEvent) => {
-      setReducedMotion(event.matches);
-      if (event.matches) setQualityTier("low");
+    const s = useArchiveStore.getState();
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    s.setReducedMotion(media.matches);
+    const change = (event: MediaQueryListEvent) => {
+      useArchiveStore.getState().setReducedMotion(event.matches);
+      if (event.matches) archiveDirector.settleMotion();
     };
-    mediaQuery.addEventListener("change", handleMotionChange);
-
+    media.addEventListener("change", change);
     detectArchiveQualityTier().then((tier) => {
-      if (!cancelled) setQualityTier(tier);
+      if (!cancelled) useArchiveStore.getState().setQualityTier(tier);
     });
-
-    const mountScene = () => {
-      if (!cancelled) setSceneReady(true);
-    };
-    const idleId = window.requestIdleCallback?.(mountScene, { timeout: 160 });
-    const timerId = idleId === undefined ? window.setTimeout(mountScene, 0) : undefined;
-
-    if (initialPhase === "desk") {
-      archiveDirector.jumpToDesk();
-    }
-
+    const id = window.setTimeout(() => setSceneReady(true), 0);
+    if (initialPhase === "desk") archiveDirector.jumpToDesk();
+    else archiveDirector.resetView();
     return () => {
       cancelled = true;
-      mediaQuery.removeEventListener("change", handleMotionChange);
-      if (idleId !== undefined) window.cancelIdleCallback(idleId);
-      if (timerId !== undefined) window.clearTimeout(timerId);
+      window.clearTimeout(id);
+      media.removeEventListener("change", change);
+      archiveDirector.dispose();
+      useArchiveStore.getState().cancelInquiry();
     };
-  }, [initialPhase, setQualityTier, setReducedMotion]);
-
-  const atDesk = phase !== "dark" && phase !== "threshold" && phase !== "approaching";
-
+  }, [initialPhase]);
   return (
-    <main className="relative min-h-screen w-full overflow-x-hidden bg-[#05070a] text-[#f4ecd8] select-none">
-      {/* Accessible Skip Link */}
+    <main
+      className={
+        "archive-room " +
+        (atDesk ? "is-at-desk " : "") +
+        (phase === "reading" || phase === "evidence" ? "is-reading " : "")
+      }
+      data-phase={phase}
+      data-still={quiet || reduced}
+      data-scene-status={unavailable ? "fallback" : ready ? "ready" : "loading"}
+    >
       <a
         href="#archive-research-desk"
-        onClick={(e) => {
-          e.preventDefault();
+        onClick={(event) => {
+          event.preventDefault();
           archiveDirector.jumpToDesk();
         }}
         className="archive-skip-link"
       >
         Skip directly to Research Desk
       </a>
-
-      {sceneReady ? <ArchiveCanvas /> : null}
-
-      <ThreadLayer />
-
-      {/* Threshold / Entrance Title Card */}
-      <ThresholdTitle />
-
-      {/* Research Desk Workspace (Revealed after entering) */}
+      {!atDesk && (
+        <div id="archive-research-desk" tabIndex={-1} className="sr-only"
+          onFocus={() => archiveDirector.jumpToDesk()} />
+      )}
       <div
-        id="archive-research-desk"
-        className={`relative z-20 mx-auto max-w-7xl px-4 sm:px-8 py-8 transition-opacity duration-700 ${
-          atDesk ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-      >
-        {/* Top Archival Header Bar */}
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#a88235]/25 pb-4 mb-6">
-          <div className="flex items-center gap-3">
-            {atDesk ? (
-              <h1 className="font-display text-2xl tracking-tight text-[#faecd5]">
-                Pensieve
-              </h1>
-            ) : (
-              <span className="font-display text-2xl tracking-tight text-[#faecd5]">
-                Pensieve
+        className="room-poster"
+        data-ready={ready && !unavailable}
+        aria-hidden="true"
+      />
+      {sceneReady && !unavailable && (
+        <SceneBoundary onUnavailable={() => setUnavailable(true)}>
+          <ArchiveCanvas onUnavailable={() => setUnavailable(true)} />
+        </SceneBoundary>
+      )}
+      <div className="room-scrim" aria-hidden="true" />
+      <div className="room-settings-dock">
+        <RoomSettings />
+      </div>
+      <ThreadLayer />
+      <ThresholdTitle />
+      {atDesk && (
+        <div className="research-shell">
+          <header className="research-header">
+            <Link
+              href="/"
+              className="archive-brand"
+              onClick={(event) => {
+                event.preventDefault();
+                archiveDirector.resetView();
+              }}
+            >
+              <span className="archive-brand-mark" aria-hidden="true">
+                ◌
               </span>
-            )}
-            <span className="font-reading italic text-sm text-[#c4b18c]">
-              The Midnight Archive
-            </span>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs font-mono">
+              <span>
+                <h1>Pensieve</h1>
+                <span className="brand-subtitle">The Midnight Archive</span>
+              </span>
+            </Link>
+          </header>
+          <div className="memory-stage">
+            <div className="stage-note">
+              <span className="archive-eyebrow">The chamber of memories</span>
+              <p>
+                A thought,
+                <br />
+                <em>given form.</em>
+              </p>
+              <span className="stage-instruction">
+                Choose a chronicle. Ask the archive.
+              </span>
+            </div>
             <button
               type="button"
-              onClick={() => archiveDirector.enterArchive()}
-              className="text-[#96a4b2] hover:text-[#faecd5] transition-colors"
+              className="pensieve-touch"
+              onClick={() => archiveDirector.stir()}
+              onPointerEnter={() => {
+                sceneUniforms.basin.hover = 1;
+                useArchiveStore.getState().setHoveredVolume(null);
+              }}
+              onPointerLeave={() => {
+                sceneUniforms.basin.hover = 0;
+                useArchiveStore.getState().setHoveredVolume(null);
+              }}
+              onFocus={() => {
+                sceneUniforms.basin.hover = 1;
+                useArchiveStore.getState().setHoveredVolume(null);
+              }}
+              onBlur={() => {
+                sceneUniforms.basin.hover = 0;
+                useArchiveStore.getState().setHoveredVolume(null);
+              }}
+              aria-label="Stir the Pensieve"
             >
-              Reset View
+              <span aria-hidden="true">≈</span> Touch the silver
             </button>
-            <span className="text-[#a88235]">·</span>
-            <span className="text-[#a89572]">EXP. NO. 0001 (RAG VS FULL)</span>
+            {unavailable && (
+              <p className="room-unavailable" role="status">
+                The room preview is resting. You can still consult the archive.
+              </p>
+            )}
           </div>
-        </header>
-
-        {/* Desk Workspace Grid */}
-        <div className="flex flex-col lg:flex-row items-start gap-8">
-          {/* Left Column: Folio Shelf Selection */}
-          <div className="w-full lg:w-64 shrink-0">
-            <VolumeProxies />
-          </div>
-
-          {/* Center Column: Question Leaf, Astrolabe, Readout, and Twin Tomes */}
-          <div className="flex-1 min-w-0 flex flex-col gap-6 w-full">
-            {/* Top Method Astrolabe Selector */}
-            <div className="flex justify-center sm:justify-start">
-              <MethodAstrolabe />
+          <section
+            id="archive-research-desk"
+            tabIndex={-1}
+            className="archive-workbench"
+            aria-label="Research desk"
+          >
+            <div className="corpus-column">
+              <VolumeProxies />
             </div>
-
-            {/* Manuscript Question Composer */}
-            <QuestionLeaf />
-
-            {/* Real-time Retrieval Readout Telemetry */}
+            <div className="inquiry-column">
+              <div className="inquiry-heading">
+                <MethodAstrolabe />
+                <span className="demo-label">Prepared demonstration</span>
+              </div>
+              <QuestionLeaf />
+            </div>
+          </section>
+          <div className="archive-results">
             <RetrievalReadout />
-
-            {/* The Showpiece: Twin Tomes */}
             <TwinTomes />
           </div>
+          <footer className="archive-footer">
+            <span>Ask the story. Follow the evidence.</span>
+            <button type="button" onClick={() => archiveDirector.resetView()}>
+              Return to the entrance ↗
+            </button>
+          </footer>
         </div>
-      </div>
-
-      {/* Floating Evidence Source Leaf */}
+      )}
       <EvidenceLeaf />
     </main>
   );

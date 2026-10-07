@@ -17,7 +17,8 @@ export const MARAUDERS_MAP_SOURCES: SourcePassage[] = [
     page_label: "192",
     page_kind: "demo_folio",
     text: "Fred and George pulled Harry into an empty classroom before the Hogsmeade excursion. They unfurled a square, worn parchment that appeared completely blank, explaining that they had nicked it from Argus Filch's filing cabinet during their first winter at the school. Touching their wand tip to the center, they whispered the oath of mischief, causing delicate ink veins to spread across the sheet until every tower, dungeon, and secret passage of the castle appeared, traced by tiny moving labels indicating wandering persons.",
-    attribution: "Original paraphrased demonstration passage · Volume III, Chapter 10",
+    attribution:
+      "Original paraphrased demonstration passage · Volume III, Chapter 10",
   },
   {
     id: "src-poa-ch10-creators",
@@ -31,7 +32,8 @@ export const MARAUDERS_MAP_SOURCES: SourcePassage[] = [
     page_label: "193",
     page_kind: "demo_folio",
     text: "Across the header in ornate cursive flourished the title: Messrs Moony, Wormtail, Padfoot, and Prongs, Purveyors of Aids to Magical Mischief-Makers, are proud to present the Marauder's Map. George informed Harry that these four unidentified scholars were noble pioneers who had mapped the school grounds in secret decades earlier, and that the twins felt it their solemn obligation to pass such a legacy directly to him.",
-    attribution: "Original paraphrased demonstration passage · Volume III, Chapter 10",
+    attribution:
+      "Original paraphrased demonstration passage · Volume III, Chapter 10",
   },
   {
     id: "src-poa-ch18-identities",
@@ -45,7 +47,8 @@ export const MARAUDERS_MAP_SOURCES: SourcePassage[] = [
     page_label: "355",
     page_kind: "demo_folio",
     text: "Within the ruined chamber of the Shrieking Shack, Professor Remus Lupin revealed the true identity of the four cartographers. He was Moony, so titled due to his monthly lycanthropic torment. James Potter transformed into a great stag and earned the name Prongs; Sirius Black became a massive black dog known as Padfoot; and Peter Pettigrew assumed the shape of a rat called Wormtail. They mastered illicit animagus transformations in their fifth year to wander the grounds freely under moonlight and forged the map to record every boundary.",
-    attribution: "Original paraphrased demonstration passage · Volume III, Chapter 18",
+    attribution:
+      "Original paraphrased demonstration passage · Volume III, Chapter 18",
   },
   {
     id: "src-poa-ch22-return",
@@ -59,7 +62,8 @@ export const MARAUDERS_MAP_SOURCES: SourcePassage[] = [
     page_label: "423",
     page_kind: "demo_folio",
     text: "Packing his trunks after tendering his resignation, Professor Lupin summoned Harry into his vacated study. Along with the Invisibility Cloak, Lupin placed the blank Marauder's Map back into Harry's hands. Lupin remarked that having surrendered his post as instructor, he felt no lingering compunction against returning the enchanted parchment created by Harry's father and his companions.",
-    attribution: "Original paraphrased demonstration passage · Volume III, Chapter 22",
+    attribution:
+      "Original paraphrased demonstration passage · Volume III, Chapter 22",
   },
 ];
 
@@ -105,7 +109,8 @@ export const MARAUDERS_MAP_RETRIEVAL: RetrievalTrace = {
       rerankScore: 0.88,
       rank: 3,
       shelfCoords: { aisle: 3, row: 4, slot: 8 },
-      excerpt: "Professor Remus Lupin revealed the true identity of the four cartographers...",
+      excerpt:
+        "Professor Remus Lupin revealed the true identity of the four cartographers...",
     },
     {
       chunkId: "chunk-0420",
@@ -133,7 +138,8 @@ export const MARAUDERS_MAP_RETRIEVAL: RetrievalTrace = {
       rerankScore: 0.31,
       rank: null,
       shelfCoords: { aisle: 4, row: 1, slot: 9 },
-      excerpt: "Cold air filled the compartment as the train ground to a halt...",
+      excerpt:
+        "Cold air filled the compartment as the train ground to a halt...",
     },
     {
       chunkId: "chunk-0630",
@@ -161,7 +167,8 @@ export const MARAUDERS_MAP_RETRIEVAL: RetrievalTrace = {
       rerankScore: 0.22,
       rank: null,
       shelfCoords: { aisle: 4, row: 3, slot: 18 },
-      excerpt: "The smell of strong tea leaves filled the warm attic classroom...",
+      excerpt:
+        "The smell of strong tea leaves filled the warm attic classroom...",
     },
     {
       chunkId: "chunk-1102",
@@ -175,7 +182,8 @@ export const MARAUDERS_MAP_RETRIEVAL: RetrievalTrace = {
       rerankScore: 0.49,
       rank: null,
       shelfCoords: { aisle: 3, row: 2, slot: 11 },
-      excerpt: "Lupin placed the blank Marauder's Map back into Harry's hands...",
+      excerpt:
+        "Lupin placed the blank Marauder's Map back into Harry's hands...",
     },
   ],
   retrievedChunkIds: ["chunk-0412", "chunk-0415", "chunk-0891"],
@@ -201,7 +209,7 @@ export const MARAUDERS_MAP_RAG_BRANCH: ArchiveBranch = {
           number: 1,
           source_id: "src-poa-ch10-gift",
           excerpt:
-            "Fred and George pulled Harry into an empty classroom... explaining that they had nicked it from Argus Filch's filing cabinet during their first winter",
+            "Fred and George pulled Harry into an empty classroom before the Hogsmeade excursion. They unfurled a square, worn parchment that appeared completely blank, explaining that they had nicked it from Argus Filch's filing cabinet during their first winter at the school.",
           start_offset: 0,
           end_offset: 172,
           structural_status: "verified",
@@ -248,7 +256,11 @@ export const MARAUDERS_MAP_RAG_BRANCH: ArchiveBranch = {
     "RAG successfully isolated the moment of bestowal and the revelation of authorship, but its retrieval boundary excluded the parchment's subsequent confiscation and final return.",
   insufficient_evidence: false,
   context: {
-    source_ids: ["src-poa-ch10-gift", "src-poa-ch10-creators", "src-poa-ch18-identities"],
+    source_ids: [
+      "src-poa-ch10-gift",
+      "src-poa-ch10-creators",
+      "src-poa-ch18-identities",
+    ],
     selected_source_count: 3,
     supplied_source_count: 8,
     strategy: "retrieved_passages",

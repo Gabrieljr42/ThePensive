@@ -16,10 +16,14 @@ export interface FrameStats {
   floorReversals: number;
   shelfRange: number;
   shelfReversals: number;
+  drawCalls: number;
+  triangles: number;
+  surface: { left: number; right: number; top: number; bottom: number } | null;
 }
 
 declare global {
   interface Window {
+    pensieveAudioCreations?: number;
     pensieveLab: {
       lcp: number;
       cls: number;

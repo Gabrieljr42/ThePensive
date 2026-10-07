@@ -5,7 +5,7 @@ import type { Citation } from "@/lib/contracts";
 import { useArchiveStore } from "../store";
 import { archiveDirector } from "../director";
 import { anchorRegistry } from "../threads/anchors";
-import { mockArchiveAdapter } from "../mock/adapter";
+import { resolveRunEvidence } from "../presentation";
 
 interface CitationMarkProps {
   citation: Citation;
@@ -18,9 +18,9 @@ export function CitationMark({ citation }: CitationMarkProps) {
   const pinnedCitationId = useArchiveStore((s) => s.pinnedCitationId);
   const setPinnedCitation = useArchiveStore((s) => s.setPinnedCitation);
   const setActiveEvidence = useArchiveStore((s) => s.setActiveEvidence);
-  const run = useArchiveStore((s) => s.run);
 
-  const isCurrent = activeCitationId === citation.id || pinnedCitationId === citation.id;
+  const isCurrent =
+    activeCitationId === citation.id || pinnedCitationId === citation.id;
   const isPinned = pinnedCitationId === citation.id;
 
   // Register anchor for the luminous provenance thread
@@ -35,18 +35,12 @@ export function CitationMark({ citation }: CitationMarkProps) {
   }, [citation.id]);
 
   const handleInspect = () => {
-    archiveDirector.inspectEvidence(citation.id);
     const store = useArchiveStore.getState();
     if (store.run) {
-      const ev = mockArchiveAdapter.getEvidence(store.run.id, citation.id);
-      useArchiveStore.getState().setActiveEvidence(ev);
-    }
-  };
-
-  const handleRelease = () => {
-    const pinned = useArchiveStore.getState().pinnedCitationId;
-    if (!pinned) {
-      archiveDirector.releaseEvidence();
+      const ev = resolveRunEvidence(store.run, citation.id);
+      if (!ev) return;
+      setActiveEvidence(ev);
+      archiveDirector.inspectEvidence(citation.id);
     }
   };
 
@@ -69,10 +63,6 @@ export function CitationMark({ citation }: CitationMarkProps) {
       aria-label={`Inspect citation [${citation.number}]: ${citation.excerpt.slice(0, 40)}...`}
       aria-pressed={isPinned}
       onClick={handleClick}
-      onMouseEnter={handleInspect}
-      onMouseLeave={handleRelease}
-      onFocus={handleInspect}
-      onBlur={handleRelease}
       className={`inline-flex items-center justify-center mx-1 px-1.5 py-0.5 rounded-xs font-mono text-[11px] font-semibold transition-all duration-200 cursor-pointer align-baseline ${
         isCurrent
           ? "bg-[#cda857] text-[#141219] shadow-[0_0_12px_#cda857] scale-105"
