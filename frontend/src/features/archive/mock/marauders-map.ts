@@ -268,6 +268,7 @@ export const MARAUDERS_MAP_RAG_BRANCH: ArchiveBranch = {
   },
   metrics: {
     basis: "illustrative",
+    usage_status: "unknown",
     latency_ms: 1480,
     input_tokens: 1842,
     output_tokens: 312,
@@ -372,6 +373,7 @@ export const MARAUDERS_MAP_FULL_BRANCH: ArchiveBranch = {
   },
   metrics: {
     basis: "illustrative",
+    usage_status: "unknown",
     latency_ms: 11840,
     input_tokens: 107200,
     output_tokens: 448,

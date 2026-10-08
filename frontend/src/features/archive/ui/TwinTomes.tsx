@@ -49,7 +49,7 @@ export function TwinTomes() {
           <button
             type="button"
             onClick={() => setMobileTab("rag")}
-            className={`flex-1 py-2 font-mono text-xs tracking-wider rounded-xs transition-colors ${
+            className={`flex-1 min-h-[44px] py-2.5 px-3 font-mono text-xs tracking-wider rounded-xs transition-colors touch-manipulation flex items-center justify-center ${
               mobileTab === "rag"
                 ? "bg-[#241c12] text-[#f5b041] border border-[#d4af37]/60"
                 : "text-[#8d9aa6]"
@@ -60,7 +60,7 @@ export function TwinTomes() {
           <button
             type="button"
             onClick={() => setMobileTab("full")}
-            className={`flex-1 py-2 font-mono text-xs tracking-wider rounded-xs transition-colors ${
+            className={`flex-1 min-h-[44px] py-2.5 px-3 font-mono text-xs tracking-wider rounded-xs transition-colors touch-manipulation flex items-center justify-center ${
               mobileTab === "full"
                 ? "bg-[#14232c] text-[#88c4e0] border border-[#6b9cb0]/60"
                 : "text-[#8d9aa6]"
@@ -89,7 +89,7 @@ export function TwinTomes() {
 
         {/* Central Gutter Measurement Scale */}
         {isCompare && (
-          <div className="tome-gutter">
+          <div className="tome-gutter hidden xl:flex justify-center">
             <GutterScale ragBranch={ragBranch} fullBranch={fullBranch} />
           </div>
         )}

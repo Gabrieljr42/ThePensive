@@ -7,6 +7,7 @@ export default defineConfig([
   ...nextTypescript,
   globalIgnores([
     ".next/**",
+    ".next-backend-check/**",
     "src/lib/generated/**",
     "next-env.d.ts",
     "test-results/**",

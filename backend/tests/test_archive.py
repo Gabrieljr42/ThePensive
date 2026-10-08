@@ -165,3 +165,44 @@ def test_matching_a_topic_does_not_fabricate_a_prepared_answer():
         preview=True,
     )
     assert all(branch.insufficient_evidence and not branch.claims for branch in run.branches)
+
+
+def test_completed_run_persists_to_repository():
+    repository = MemoryRunRepository()
+    service = ExperimentService(repository)
+    run = service.create(
+        RunRequest(
+            question=CORPORA[0].examples[0].question,
+            corpus_id=CORPORA[0].id,
+            corpus_version=CORPORA[0].version,
+        )
+    )
+    snapshot = repository.get(run.id)
+    snapshot.created_at = datetime.now(UTC) - timedelta(seconds=3.0)
+    repository.save(snapshot)
+
+    completed = service.view(run.id)
+    assert completed.status == "complete"
+    assert all(branch.status == "complete" for branch in completed.branches)
+
+    stored = repository.get(run.id)
+    assert stored is not None
+    assert stored.status == "complete"
+
+
+def test_cancel_persists_to_repository():
+    repository = MemoryRunRepository()
+    service = ExperimentService(repository)
+    run = service.create(
+        RunRequest(
+            question=CORPORA[0].examples[0].question,
+            corpus_id=CORPORA[0].id,
+            corpus_version=CORPORA[0].version,
+        )
+    )
+    cancelled = service.cancel(run.id)
+    assert cancelled.status == "cancelled"
+
+    stored = repository.get(run.id)
+    assert stored is not None
+    assert stored.status == "cancelled"

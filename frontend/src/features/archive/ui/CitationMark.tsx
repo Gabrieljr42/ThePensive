@@ -63,7 +63,7 @@ export function CitationMark({ citation }: CitationMarkProps) {
       aria-label={`Inspect citation [${citation.number}]: ${citation.excerpt.slice(0, 40)}...`}
       aria-pressed={isPinned}
       onClick={handleClick}
-      className={`inline-flex items-center justify-center mx-1 px-1.5 py-0.5 rounded-xs font-mono text-[11px] font-semibold transition-all duration-200 cursor-pointer align-baseline ${
+      className={`touch-target-44 relative inline-flex items-center justify-center mx-1 px-1.5 py-0.5 rounded-xs font-mono text-[11px] font-semibold transition-all duration-200 cursor-pointer align-baseline touch-manipulation before:content-[''] before:absolute before:top-1/2 before:left-1/2 before:-translate-x-1/2 before:-translate-y-1/2 before:min-w-[44px] before:min-h-[44px] before:w-full before:h-full ${
         isCurrent
           ? "bg-[#cda857] text-[#141219] shadow-[0_0_12px_#cda857] scale-105"
           : "bg-[#8a671d]/20 text-[#cda857] hover:bg-[#cda857]/40 border border-[#8a671d]/30"

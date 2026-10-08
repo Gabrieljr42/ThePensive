@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Pensieve API",
-    "description": "The Midnight Archive. This milestone uses prepared demo runs.",
-    "version": "1.0.0"
+    "description": "Edition-aware RAG and Full Context experiments, with exact evidence.",
+    "version": "2.0.0"
   },
   "paths": {
     "/health": {
@@ -15,13 +15,39 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
-                  "title": "Response Health Health Get"
-                }
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Readiness",
+        "operationId": "readiness_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "summary": "Status",
+        "operationId": "status_api_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -43,6 +69,66 @@
                   },
                   "type": "array",
                   "title": "Response Corpora Api Corpora Get"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
                 }
               }
             }
@@ -102,6 +188,16 @@
               }
             }
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -112,6 +208,16 @@
             },
             "description": "Not Found"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -121,6 +227,114 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/runs/estimate": {
+      "post": {
+        "summary": "Estimate",
+        "operationId": "estimate_api_runs_estimate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunEstimate"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
           }
         }
       }
@@ -150,6 +364,16 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Not Found",
             "content": {
@@ -160,8 +384,38 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/json": {
                 "schema": {
@@ -199,6 +453,16 @@
               }
             }
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -209,6 +473,16 @@
             },
             "description": "Not Found"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -218,6 +492,26 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         }
       }
@@ -248,6 +542,16 @@
               }
             }
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -258,6 +562,16 @@
             },
             "description": "Not Found"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -267,6 +581,26 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         }
       }
@@ -306,6 +640,16 @@
               }
             }
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -316,6 +660,16 @@
             },
             "description": "Not Found"
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -325,6 +679,26 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         }
       }
@@ -350,6 +724,38 @@
           "message"
         ],
         "title": "ApiProblem"
+      },
+      "BookSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "ordinal": {
+            "type": "integer",
+            "title": "Ordinal"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/ChapterSummary"
+            },
+            "type": "array",
+            "title": "Chapters"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "ordinal",
+          "title",
+          "chapters"
+        ],
+        "title": "BookSummary"
       },
       "Branch": {
         "properties": {
@@ -402,6 +808,27 @@
               }
             ],
             "title": "Error"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "retrieval": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetrievalTrace"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -420,6 +847,45 @@
         ],
         "title": "Branch"
       },
+      "BranchEstimate": {
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/Method"
+          },
+          "eligible": {
+            "type": "boolean",
+            "title": "Eligible"
+          },
+          "input_tokens": {
+            "type": "integer",
+            "title": "Input Tokens"
+          },
+          "maximum_cost_usd": {
+            "type": "number",
+            "title": "Maximum Cost Usd"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "method",
+          "eligible",
+          "input_tokens",
+          "maximum_cost_usd"
+        ],
+        "title": "BranchEstimate"
+      },
       "BranchStatus": {
         "type": "string",
         "enum": [
@@ -432,6 +898,60 @@
           "failed"
         ],
         "title": "BranchStatus"
+      },
+      "ChapterSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "page_start": {
+            "type": "integer",
+            "title": "Page Start"
+          },
+          "page_end": {
+            "type": "integer",
+            "title": "Page End"
+          },
+          "source_count": {
+            "type": "integer",
+            "title": "Source Count",
+            "default": 0
+          },
+          "chunk_count": {
+            "type": "integer",
+            "title": "Chunk Count",
+            "default": 0
+          },
+          "estimated_tokens": {
+            "type": "integer",
+            "title": "Estimated Tokens",
+            "default": 0
+          },
+          "indexed": {
+            "type": "boolean",
+            "title": "Indexed",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "title",
+          "page_start",
+          "page_end"
+        ],
+        "title": "ChapterSummary"
       },
       "Citation": {
         "properties": {
@@ -548,6 +1068,39 @@
           "is_simulated": {
             "type": "boolean",
             "title": "Is Simulated"
+          },
+          "input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Tokens"
+          },
+          "token_count_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Count Basis"
+          },
+          "manifest_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest Hash"
           }
         },
         "additionalProperties": false,
@@ -606,6 +1159,56 @@
             },
             "type": "array",
             "title": "Examples"
+          },
+          "books": {
+            "items": {
+              "$ref": "#/components/schemas/BookSummary"
+            },
+            "type": "array",
+            "title": "Books"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "default": "en"
+          },
+          "indexed": {
+            "type": "boolean",
+            "title": "Indexed",
+            "default": false
+          },
+          "extraction_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Version"
+          },
+          "embedding_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding Model"
+          },
+          "embedding_dimensions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding Dimensions"
           }
         },
         "additionalProperties": false,
@@ -627,9 +1230,12 @@
         "properties": {
           "schema_version": {
             "type": "string",
-            "const": "1.0",
+            "enum": [
+              "1.0",
+              "2.0"
+            ],
             "title": "Schema Version",
-            "default": "1.0"
+            "default": "2.0"
           },
           "run_id": {
             "type": "string",
@@ -688,9 +1294,12 @@
         "properties": {
           "schema_version": {
             "type": "string",
-            "const": "1.0",
+            "enum": [
+              "1.0",
+              "2.0"
+            ],
             "title": "Schema Version",
-            "default": "1.0"
+            "default": "2.0"
           },
           "id": {
             "type": "string",
@@ -781,6 +1390,136 @@
         ],
         "title": "Mode"
       },
+      "RetrievalCandidate": {
+        "properties": {
+          "chunkId": {
+            "type": "string",
+            "title": "Chunkid"
+          },
+          "sourceId": {
+            "type": "string",
+            "title": "Sourceid"
+          },
+          "volumeId": {
+            "type": "string",
+            "title": "Volumeid"
+          },
+          "bookTitle": {
+            "type": "string",
+            "title": "Booktitle"
+          },
+          "chapterTitle": {
+            "type": "string",
+            "title": "Chaptertitle"
+          },
+          "chapterNumber": {
+            "type": "integer",
+            "title": "Chapternumber"
+          },
+          "pageLabel": {
+            "type": "string",
+            "title": "Pagelabel"
+          },
+          "similarity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Similarity"
+          },
+          "rerankScore": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rerankscore"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "shelfCoords": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Shelfcoords"
+          },
+          "excerpt": {
+            "type": "string",
+            "title": "Excerpt"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "chunkId",
+          "sourceId",
+          "volumeId",
+          "bookTitle",
+          "chapterTitle",
+          "chapterNumber",
+          "pageLabel",
+          "shelfCoords",
+          "excerpt"
+        ],
+        "title": "RetrievalCandidate"
+      },
+      "RetrievalTrace": {
+        "properties": {
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievalCandidate"
+            },
+            "type": "array",
+            "title": "Candidates"
+          },
+          "retrievedChunkIds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Retrievedchunkids"
+          },
+          "reranker": {
+            "type": "string",
+            "title": "Reranker"
+          },
+          "embeddingModel": {
+            "type": "string",
+            "title": "Embeddingmodel"
+          },
+          "topK": {
+            "type": "integer",
+            "title": "Topk"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "candidates",
+          "retrievedChunkIds",
+          "reranker",
+          "embeddingModel",
+          "topK"
+        ],
+        "title": "RetrievalTrace"
+      },
       "RunConfiguration": {
         "properties": {
           "corpus_id": {
@@ -806,6 +1545,42 @@
           "output_limit": {
             "type": "integer",
             "title": "Output Limit"
+          },
+          "book_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Book Ids"
+          },
+          "chapter_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Chapter Ids"
+          },
+          "configuration_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configuration Hash"
+          },
+          "pricing_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricing Version"
           }
         },
         "additionalProperties": false,
@@ -819,6 +1594,70 @@
           "output_limit"
         ],
         "title": "RunConfiguration"
+      },
+      "RunEstimate": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "2.0",
+            "title": "Schema Version",
+            "default": "2.0"
+          },
+          "scope_label": {
+            "type": "string",
+            "title": "Scope Label"
+          },
+          "book_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Book Ids"
+          },
+          "chapter_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Chapter Ids"
+          },
+          "token_count_basis": {
+            "type": "string",
+            "title": "Token Count Basis"
+          },
+          "branches": {
+            "items": {
+              "$ref": "#/components/schemas/BranchEstimate"
+            },
+            "type": "array",
+            "title": "Branches"
+          },
+          "maximum_cost_usd": {
+            "type": "number",
+            "title": "Maximum Cost Usd"
+          },
+          "available_budget_usd": {
+            "type": "number",
+            "title": "Available Budget Usd"
+          },
+          "live_available": {
+            "type": "boolean",
+            "title": "Live Available"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scope_label",
+          "book_ids",
+          "chapter_ids",
+          "token_count_basis",
+          "branches",
+          "maximum_cost_usd",
+          "available_budget_usd",
+          "live_available"
+        ],
+        "title": "RunEstimate"
       },
       "RunMetrics": {
         "properties": {
@@ -896,6 +1735,56 @@
               }
             ],
             "title": "Pricing Label"
+          },
+          "thinking_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thinking Tokens"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "provider_request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Request Id"
+          },
+          "stage_ms": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Stage Ms"
+          },
+          "usage_status": {
+            "type": "string",
+            "enum": [
+              "reported",
+              "estimated",
+              "unknown"
+            ],
+            "title": "Usage Status",
+            "default": "unknown"
           }
         },
         "additionalProperties": false,
@@ -924,6 +1813,35 @@
           "corpus_version": {
             "type": "string",
             "title": "Corpus Version"
+          },
+          "book_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 7,
+            "title": "Book Ids"
+          },
+          "chapter_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 199,
+            "title": "Chapter Ids"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
           }
         },
         "additionalProperties": false,
@@ -990,6 +1908,39 @@
           "attribution": {
             "type": "string",
             "title": "Attribution"
+          },
+          "book_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Book Id"
+          },
+          "chapter_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter Id"
+          },
+          "pdf_page_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pdf Page Index"
           }
         },
         "additionalProperties": false,

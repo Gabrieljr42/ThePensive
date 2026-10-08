@@ -6,7 +6,10 @@ import { archiveDirector } from "../director";
 import { anchorRegistry } from "../threads/anchors";
 import { submitInquiry } from "../inquiry/controller";
 import { MARAUDERS_MAP_QUESTION } from "../mock/marauders-map";
+import { MIRROR_OF_ERISED_QUESTION } from "../mock/mirror-of-erised";
+import { PHILOSOPHERS_STONE_QUESTION } from "../mock/philosophers-stone";
 import { InquiryStatus } from "./InquiryStatus";
+import { ScopePicker } from "./ScopePicker";
 
 export function QuestionLeaf() {
   const sealRef = useRef<HTMLButtonElement | null>(null);
@@ -14,9 +17,12 @@ export function QuestionLeaf() {
   const question = useArchiveStore((s) => s.question);
   const setQuestion = useArchiveStore((s) => s.setQuestion);
   const selectedVolumeIds = useArchiveStore((s) => s.selectedVolumeIds);
+  const selectSingleVolume = useArchiveStore((s) => s.selectSingleVolume);
   const mode = useArchiveStore((s) => s.mode);
   const isBusy = useArchiveStore((s) => s.isBusy);
   const error = useArchiveStore((s) => s.error);
+  const corpus = useArchiveStore((s) => s.corpus);
+  const selectedChapterIds = useArchiveStore((s) => s.selectedChapterIds);
 
   // Register anchor for the cast thread
   useEffect(() => {
@@ -33,12 +39,17 @@ export function QuestionLeaf() {
     if (e) e.preventDefault();
     if (isBusy || !question.trim()) return;
 
+    const isVol1 =
+      selectedVolumeIds.includes("vol-1") &&
+      !selectedVolumeIds.includes("vol-3");
+
     await submitInquiry(
       {
         question: question.trim(),
         mode,
         corpus_id: "harry-potter-archive",
-        corpus_version: "vol-3-poa",
+        corpus_version: corpus?.version ?? (isVol1 ? "vol-1-ps" : "vol-3-poa"),
+        ...(corpus ? { book_ids: selectedVolumeIds, chapter_ids: selectedChapterIds } : {}),
       },
       selectedVolumeIds,
     );
@@ -48,14 +59,17 @@ export function QuestionLeaf() {
     {
       label: "The Marauder's Map",
       q: MARAUDERS_MAP_QUESTION,
+      volumeId: "vol-3",
     },
     {
       label: "The Mirror of Erised",
-      q: "What does the Mirror of Erised reveal, and why is it dangerous?",
+      q: MIRROR_OF_ERISED_QUESTION,
+      volumeId: "vol-1",
     },
     {
       label: "The Philosopher's Stone",
-      q: "Why can Harry retrieve the Philosopher's Stone from the mirror?",
+      q: PHILOSOPHERS_STONE_QUESTION,
+      volumeId: "vol-1",
     },
   ];
 
@@ -72,6 +86,10 @@ export function QuestionLeaf() {
       </div>
 
       <form onSubmit={handleSubmit} className="mt-4" aria-busy={isBusy}>
+        <p className="mb-3 font-mono text-[10px] text-[#63553e]">
+          {corpus ? "Live inquiry · supplied English PDF · measured API usage" : "Recorded demonstration · prepared answers and illustrative measurements"}
+        </p>
+        <ScopePicker />
         {/* Ruled Manuscript Writing Area */}
         <div className="relative">
           <label htmlFor="archive-inquiry-input" className="sr-only">
@@ -106,6 +124,9 @@ export function QuestionLeaf() {
               disabled={isBusy}
               onClick={() => {
                 setQuestion(item.q);
+                if (!selectedVolumeIds.includes(item.volumeId)) {
+                  selectSingleVolume(item.volumeId);
+                }
               }}
               className="px-2.5 py-1 rounded-xs bg-[#ddcfb3]/70 hover:bg-[#d4c3a1] text-[#362f26] font-reading text-xs transition-colors border border-[#8a671d]/15"
             >

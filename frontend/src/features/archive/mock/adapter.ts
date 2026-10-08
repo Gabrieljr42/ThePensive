@@ -2,6 +2,8 @@ import type { Corpus, EvidenceResponse, RunRequest } from "@/lib/contracts";
 import type { ArchiveBranch, ArchiveRun } from "../model";
 import { ARCHIVE_VOLUMES } from "./volumes";
 import { MARAUDERS_MAP_QUESTION, MARAUDERS_MAP_RUN } from "./marauders-map";
+import { MIRROR_OF_ERISED_QUESTION, MIRROR_OF_ERISED_RUN } from "./mirror-of-erised";
+import { PHILOSOPHERS_STONE_QUESTION, PHILOSOPHERS_STONE_RUN } from "./philosophers-stone";
 import { resolveRunEvidence } from "../presentation";
 
 export const MOCK_CORPUS: Corpus = {
@@ -10,7 +12,9 @@ export const MOCK_CORPUS: Corpus = {
   title: "The Chronicles of Hogwarts",
   subtitle: "Seven enchanted tomes of magical history",
   edition: "Archival Demonstration Edition",
-  source_kind: "ingested_edition",
+  source_kind: "original_companion_notes",
+  language: "en",
+  indexed: false,
   book_count: ARCHIVE_VOLUMES.length,
   source_count: ARCHIVE_VOLUMES.reduce((n, volume) => n + volume.chunks, 0),
   examples: [
@@ -18,6 +22,16 @@ export const MOCK_CORPUS: Corpus = {
       id: "marauder",
       label: "The Marauder's Map",
       question: MARAUDERS_MAP_QUESTION,
+    },
+    {
+      id: "mirror",
+      label: "The Mirror of Erised",
+      question: MIRROR_OF_ERISED_QUESTION,
+    },
+    {
+      id: "stone",
+      label: "The Philosopher's Stone",
+      question: PHILOSOPHERS_STONE_QUESTION,
     },
   ],
 };
@@ -42,22 +56,45 @@ export const mockArchiveAdapter = {
     const id = "run-" + Date.now() + "-" + ++sequence;
     const canonical = (question: string) =>
       question.trim().toLowerCase().replace(/[?!.]/g, "");
-    const prepared =
-      canonical(req.question) === canonical(MARAUDERS_MAP_QUESTION) &&
-      selectedVolumes.includes("vol-3");
+
+    const q = canonical(req.question);
     const methods: ("rag" | "full_context")[] =
       req.mode === "compare" ? ["rag", "full_context"] : [req.mode];
-    if (prepared)
+
+    // Scenario selector
+    let baseRun: ArchiveRun | null = null;
+    let requiredVolume = "vol-3";
+    let volumeName = "The Prisoner of Azkaban";
+    let volumeNum = "Volume III";
+
+    if (q === canonical(MARAUDERS_MAP_QUESTION)) {
+      baseRun = MARAUDERS_MAP_RUN;
+      requiredVolume = "vol-3";
+      volumeName = "The Prisoner of Azkaban";
+      volumeNum = "Volume III";
+    } else if (q === canonical(MIRROR_OF_ERISED_QUESTION)) {
+      baseRun = MIRROR_OF_ERISED_RUN;
+      requiredVolume = "vol-1";
+      volumeName = "The Philosopher's Stone";
+      volumeNum = "Volume I";
+    } else if (q === canonical(PHILOSOPHERS_STONE_QUESTION)) {
+      baseRun = PHILOSOPHERS_STONE_RUN;
+      requiredVolume = "vol-1";
+      volumeName = "The Philosopher's Stone";
+      volumeNum = "Volume I";
+    }
+
+    if (baseRun && selectedVolumes.includes(requiredVolume)) {
       return remember({
-        ...MARAUDERS_MAP_RUN,
+        ...baseRun,
         id,
         mode: req.mode,
         question: req.question.trim(),
         is_preview: false,
         data_mode: "mock",
         created_at: new Date().toISOString(),
-        scopeVolumeIds: ["vol-3"],
-        branches: MARAUDERS_MAP_RUN.branches
+        scopeVolumeIds: [requiredVolume],
+        branches: baseRun.branches
           .filter((branch) => methods.includes(branch.method))
           .map((branch) => ({
             ...branch,
@@ -65,7 +102,7 @@ export const mockArchiveAdapter = {
             claims: branch.claims.map((claim) => ({
               ...claim,
               citations: claim.citations.map((citation) => {
-                const source = MARAUDERS_MAP_RUN.sources.find(
+                const source = baseRun!.sources.find(
                   (item) => item.id === citation.source_id,
                 );
                 const start = source?.text.indexOf(citation.excerpt) ?? -1;
@@ -80,9 +117,12 @@ export const mockArchiveAdapter = {
             })),
           })),
       });
-    const introduction = selectedVolumes.includes("vol-3")
-      ? "This archive demonstration contains a prepared investigation of the Marauder's Map. This question has no prepared answer."
-      : "The prepared Marauder's Map investigation belongs to Volume III. Select The Prisoner of Azkaban to consult its evidence.";
+    }
+
+    const introduction = baseRun
+      ? `The prepared investigation belongs to ${volumeNum}. Select ${volumeName} to consult its evidence.`
+      : "This archive demonstration contains prepared investigations of the Marauder's Map, the Mirror of Erised, and the Philosopher's Stone. This question has no prepared answer.";
+
     const branches: ArchiveBranch[] = methods.map((method) => ({
       id: id + "-" + method,
       method,
@@ -90,8 +130,9 @@ export const mockArchiveAdapter = {
       answer_title: "Uncatalogued Inquiry",
       introduction,
       claims: [],
-      conclusion:
-        "Choose the Marauder's Map suggestion and Volume III to explore the prepared investigation.",
+      conclusion: baseRun
+        ? `Choose ${volumeName} from the collection proxies to explore the prepared investigation.`
+        : "Choose one of the catalogued suggestions to explore a prepared investigation.",
       insufficient_evidence: true,
       context: {
         source_ids: [],
@@ -102,12 +143,14 @@ export const mockArchiveAdapter = {
       },
       metrics: {
         basis: "illustrative",
+        usage_status: "unknown",
         latency_ms: null,
         input_tokens: null,
         output_tokens: null,
         estimated_cost_usd: null,
       },
     }));
+
     return remember({
       schema_version: "1.0",
       id,

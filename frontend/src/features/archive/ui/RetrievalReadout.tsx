@@ -9,7 +9,7 @@ export function RetrievalReadout() {
   return (
     <div className="retrieval-readout" aria-live="polite">
       <span className="readout-label">
-        Memories consulted <span>· illustrative measurements</span>
+        Memories consulted <span>· {run.data_mode === "live" ? "measured operations" : "illustrative measurements"}</span>
       </span>
       <div className="readout-branches">
         {run.branches.map((branch) => (
@@ -21,12 +21,12 @@ export function RetrievalReadout() {
               {branch.method === "rag"
                 ? (branch.retrieval?.candidates.length ?? 0) +
                   " candidates → " +
-                  branch.context.selected_source_count +
+                  branch.context.supplied_source_count +
                   " selected passages"
                 : branch.status !== "complete"
                   ? branchStatus(branch)
                   : branch.context.supplied_source_count > 0
-                    ? "Prepared Volume III scope"
+                    ? run.data_mode === "live" ? `${branch.context.supplied_source_count} source pages · complete selected scope` : "Prepared Volume III scope"
                     : "No prepared evidence in this scope"}
             </span>
             <span>

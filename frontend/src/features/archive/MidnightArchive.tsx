@@ -17,6 +17,8 @@ import { EvidenceLeaf } from "./ui/EvidenceLeaf";
 import { RoomSettings } from "./ui/RoomSettings";
 import { sceneUniforms } from "./uniforms";
 import { DiveOverlay } from "./ui/DiveOverlay";
+import { archiveApi } from "@/lib/api";
+import { configureInquiryTransport, createHttpInquiryTransport } from "./inquiry/transport";
 
 const ArchiveCanvas = dynamic(
   () => import("./scene/ArchiveCanvas").then((mod) => mod.ArchiveCanvas),
@@ -54,6 +56,21 @@ export function MidnightArchive({
   const [sceneReady, setSceneReady] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
   const atDesk = !["dark", "threshold", "approaching"].includes(phase);
+  useEffect(() => {
+    const abort = new AbortController();
+    archiveApi.status(abort.signal).then(async (status) => {
+      if (!status.live_enabled) return;
+      const corpora = await archiveApi.corpora(abort.signal);
+      const corpus = corpora.find((item) => item.version.startsWith("pdf-"));
+      if (corpus && !abort.signal.aborted) {
+        useArchiveStore.getState().loadCorpus(corpus, status.public_mode);
+        configureInquiryTransport(createHttpInquiryTransport());
+      }
+    }).catch(() => {
+      // Recorded examples remain available if the live server cannot be reached.
+    });
+    return () => abort.abort();
+  }, []);
   useEffect(() => {
     let cancelled = false;
     const s = useArchiveStore.getState();

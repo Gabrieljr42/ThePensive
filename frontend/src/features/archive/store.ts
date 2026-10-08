@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { EvidenceResponse, Mode } from "@/lib/contracts";
+import type { Corpus, EvidenceResponse, Mode } from "@/lib/contracts";
 import {
   hasReadableAnswer,
   type ArchiveRun,
@@ -9,6 +9,8 @@ import {
 } from "./model";
 import { ARCHIVE_VOLUMES } from "./mock/volumes";
 import { MARAUDERS_MAP_QUESTION } from "./mock/marauders-map";
+import { MIRROR_OF_ERISED_QUESTION } from "./mock/mirror-of-erised";
+import { PHILOSOPHERS_STONE_QUESTION } from "./mock/philosophers-stone";
 import {
   createArchiveQualityState,
   noteDetectedTier,
@@ -19,6 +21,11 @@ import {
 } from "./archiveBudget";
 
 interface ArchiveState {
+  corpus: Corpus | null;
+  publicMode: boolean;
+  selectedChapterIds: string[];
+  setSelectedChapters: (ids: string[]) => void;
+  loadCorpus: (corpus: Corpus, publicMode: boolean) => void;
   phase: ScenePhase;
   volumes: Volume[];
   selectedVolumeIds: string[];
@@ -80,6 +87,35 @@ interface ArchiveState {
 }
 
 export const useArchiveStore = create<ArchiveState>((set) => ({
+  corpus: null,
+  publicMode: false,
+  selectedChapterIds: [],
+  setSelectedChapters: (selectedChapterIds) => set({ selectedChapterIds }),
+  loadCorpus: (corpus, publicMode) => set((state) => {
+    const books = corpus.books ?? [];
+    const first = books.find((book) => book.chapters.some((chapter) => chapter.source_count));
+    return {
+      corpus,
+      publicMode,
+      selectedVolumeIds: first ? [first.id] : [],
+      selectedChapterIds: first?.chapters.filter((chapter) => chapter.source_count).slice(0, 3).map((chapter) => chapter.id) ?? [],
+      question: "How do the Dursleys react to the letters addressed to Harry?",
+      isCustomQuestion: true,
+      volumes: state.volumes.map((volume) => {
+        const book = books.find((item) => item.id === volume.id);
+        if (!book) return { ...volume, indexing: "pending" as const };
+        return {
+          ...volume,
+          title: book.title,
+          pages: book.chapters.reduce((sum, chapter) => sum + chapter.source_count, 0),
+          chapters: book.chapters.length,
+          chunks: book.chapters.reduce((sum, chapter) => sum + chapter.chunk_count, 0),
+          tokens: book.chapters.reduce((sum, chapter) => sum + chapter.estimated_tokens, 0),
+          indexing: book.chapters.every((chapter) => chapter.indexed) ? "indexed" as const : "pending" as const,
+        };
+      }),
+    };
+  }),
   phase: "dark",
   volumes: ARCHIVE_VOLUMES,
   selectedVolumeIds: ["vol-3"], // Volume III (Prisoner of Azkaban) selected by default
@@ -117,12 +153,16 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
         if (state.selectedVolumeIds.length === 1) return state;
         return {
           selectedVolumeIds: state.selectedVolumeIds.filter((v) => v !== id),
+          selectedChapterIds: state.selectedChapterIds.filter((chapter) => !chapter.startsWith(id + "-ch-")),
         };
       }
       return { selectedVolumeIds: [...state.selectedVolumeIds, id] };
     }),
 
-  selectSingleVolume: (id) => set({ selectedVolumeIds: [id] }),
+  selectSingleVolume: (id) => set((state) => ({
+    selectedVolumeIds: [id],
+    selectedChapterIds: state.selectedChapterIds.filter((chapter) => chapter.startsWith(id + "-ch-")),
+  })),
 
   setHoveredVolume: (id) => set({ hoveredVolumeId: id }),
 
@@ -131,7 +171,11 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
   setQuestion: (question) =>
     set({
       question,
-      isCustomQuestion: question.trim() !== MARAUDERS_MAP_QUESTION,
+      isCustomQuestion: ![
+        MARAUDERS_MAP_QUESTION,
+        MIRROR_OF_ERISED_QUESTION,
+        PHILOSOPHERS_STONE_QUESTION,
+      ].includes(question.trim()),
     }),
 
   setRun: (run) => set({ run }),

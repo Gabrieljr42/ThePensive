@@ -38,6 +38,25 @@ class ExampleQuestion(Contract):
     question: str
 
 
+class ChapterSummary(Contract):
+    id: str
+    number: int
+    title: str
+    page_start: int
+    page_end: int
+    source_count: int = 0
+    chunk_count: int = 0
+    estimated_tokens: int = 0
+    indexed: bool = False
+
+
+class BookSummary(Contract):
+    id: str
+    ordinal: int
+    title: str
+    chapters: list[ChapterSummary]
+
+
 class Corpus(Contract):
     id: str
     version: str
@@ -48,6 +67,12 @@ class Corpus(Contract):
     book_count: int
     source_count: int
     examples: list[ExampleQuestion]
+    books: list[BookSummary] = Field(default_factory=list)
+    language: str = "en"
+    indexed: bool = False
+    extraction_version: str | None = None
+    embedding_model: str | None = None
+    embedding_dimensions: int | None = None
 
 
 class SourcePassage(Contract):
@@ -63,6 +88,9 @@ class SourcePassage(Contract):
     page_kind: Literal["demo_folio", "printed", "pdf", "location"]
     text: str
     attribution: str
+    book_id: str | None = None
+    chapter_id: str | None = None
+    pdf_page_index: int | None = None
 
 
 class Citation(Contract):
@@ -90,6 +118,11 @@ class RunMetrics(Contract):
     cached_input_tokens: int | None = None
     estimated_cost_usd: float | None = None
     pricing_label: str | None = None
+    thinking_tokens: int | None = None
+    model_version: str | None = None
+    provider_request_id: str | None = None
+    stage_ms: dict[str, int] = Field(default_factory=dict)
+    usage_status: Literal["reported", "estimated", "unknown"] = "unknown"
 
 
 class ContextManifest(Contract):
@@ -98,6 +131,32 @@ class ContextManifest(Contract):
     supplied_source_count: int
     strategy: Literal["retrieved_passages", "complete_scope"]
     is_simulated: bool
+    input_tokens: int | None = None
+    token_count_basis: str | None = None
+    manifest_hash: str | None = None
+
+
+class RetrievalCandidate(Contract):
+    chunkId: str
+    sourceId: str
+    volumeId: str
+    bookTitle: str
+    chapterTitle: str
+    chapterNumber: int
+    pageLabel: str
+    similarity: float | None = None
+    rerankScore: float | None = None
+    rank: int | None = None
+    shelfCoords: dict[str, int]
+    excerpt: str
+
+
+class RetrievalTrace(Contract):
+    candidates: list[RetrievalCandidate]
+    retrievedChunkIds: list[str]
+    reranker: str
+    embeddingModel: str
+    topK: int
 
 
 class Branch(Contract):
@@ -112,6 +171,8 @@ class Branch(Contract):
     context: ContextManifest
     metrics: RunMetrics
     error: str | None = None
+    error_code: str | None = None
+    retrieval: RetrievalTrace | None = None
 
 
 class RunConfiguration(Contract):
@@ -121,10 +182,14 @@ class RunConfiguration(Contract):
     model: str
     prompt_version: str
     output_limit: int
+    book_ids: list[str] = Field(default_factory=list)
+    chapter_ids: list[str] = Field(default_factory=list)
+    configuration_hash: str | None = None
+    pricing_version: str | None = None
 
 
 class ExperimentRun(Contract):
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "2.0"] = "2.0"
     id: str
     question: str
     mode: Mode
@@ -142,6 +207,9 @@ class RunRequest(Contract):
     mode: Mode = Mode.COMPARE
     corpus_id: str
     corpus_version: str
+    book_ids: list[str] = Field(default_factory=list, max_length=7)
+    chapter_ids: list[str] = Field(default_factory=list, max_length=199)
+    idempotency_key: str | None = Field(default=None, min_length=8, max_length=100)
 
     @field_validator("question")
     @classmethod
@@ -158,9 +226,29 @@ class ApiProblem(Contract):
 
 
 class EvidenceResponse(Contract):
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "2.0"] = "2.0"
     run_id: str
     branch_id: str
     claim: Claim
     citation: Citation
     source: SourcePassage
+
+
+class BranchEstimate(Contract):
+    method: Method
+    eligible: bool
+    input_tokens: int
+    maximum_cost_usd: float
+    reason: str | None = None
+
+
+class RunEstimate(Contract):
+    schema_version: Literal["2.0"] = "2.0"
+    scope_label: str
+    book_ids: list[str]
+    chapter_ids: list[str]
+    token_count_basis: str
+    branches: list[BranchEstimate]
+    maximum_cost_usd: float
+    available_budget_usd: float
+    live_available: bool

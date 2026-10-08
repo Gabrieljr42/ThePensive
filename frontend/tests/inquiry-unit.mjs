@@ -5,6 +5,14 @@ import ts from "typescript";
 
 // Exercise the real store and adapter without a browser or a new test dependency.
 const load = createRequire(import.meta.url);
+const threeModule = await import("three");
+const resolvedThree = load.resolve("three");
+load.cache[resolvedThree] = {
+  id: resolvedThree,
+  filename: resolvedThree,
+  loaded: true,
+  exports: threeModule,
+};
 const original = load.extensions[".ts"];
 const originalTsx = load.extensions[".tsx"];
 load.extensions[".ts"] = (module, filename) => {
@@ -27,6 +35,12 @@ try {
   );
   const { MARAUDERS_MAP_QUESTION } = load(
     "../src/features/archive/mock/marauders-map.ts",
+  );
+  const { MIRROR_OF_ERISED_QUESTION } = load(
+    "../src/features/archive/mock/mirror-of-erised.ts",
+  );
+  const { PHILOSOPHERS_STONE_QUESTION } = load(
+    "../src/features/archive/mock/philosophers-stone.ts",
   );
   const { presentMemories, resolveRunEvidence } = load(
     "../src/features/archive/presentation.ts",
@@ -314,6 +328,98 @@ try {
     observe();
     configureInquiryTransport(demoInquiryTransport);
   }
+
+  // Feature F3: Assert Mirror of Erised mock scenario
+  const erisedRun = await mockArchiveAdapter.createRun(
+    {
+      question: MIRROR_OF_ERISED_QUESTION,
+      mode: "compare",
+      corpus_id: "harry-potter-archive",
+      corpus_version: "vol-1-ps",
+    },
+    ["vol-1"],
+  );
+  assert.equal(erisedRun.sources.length, 3, "Erised run must have 3 sources");
+  assert.equal(erisedRun.branches.length, 2, "Erised run must have 2 branches");
+  assert.equal(erisedRun.branches[0].insufficient_evidence, false);
+  for (const branch of erisedRun.branches) {
+    for (const claim of branch.claims) {
+      for (const citation of claim.citations) {
+        const source = erisedRun.sources.find((item) => item.id === citation.source_id);
+        assert.ok(source, `Source ${citation.source_id} must exist`);
+        assert.equal(
+          source.text.slice(citation.start_offset, citation.end_offset),
+          citation.excerpt,
+          "Erised citation excerpt must match source text verbatim",
+        );
+      }
+    }
+  }
+  const erisedEvidence = mockArchiveAdapter.getEvidence(erisedRun.id, "cit-mirror-rag-1");
+  assert.ok(erisedEvidence, "Erised evidence lookup must resolve");
+  assert.equal(erisedEvidence.source.book_short, "Stone");
+
+  // Feature F3: Assert Philosopher's Stone mock scenario
+  const stoneRun = await mockArchiveAdapter.createRun(
+    {
+      question: PHILOSOPHERS_STONE_QUESTION,
+      mode: "compare",
+      corpus_id: "harry-potter-archive",
+      corpus_version: "vol-1-ps",
+    },
+    ["vol-1"],
+  );
+  assert.equal(stoneRun.sources.length, 3, "Stone run must have 3 sources");
+  assert.equal(stoneRun.branches.length, 2, "Stone run must have 2 branches");
+  assert.equal(stoneRun.branches[0].insufficient_evidence, false);
+  for (const branch of stoneRun.branches) {
+    for (const claim of branch.claims) {
+      for (const citation of claim.citations) {
+        const source = stoneRun.sources.find((item) => item.id === citation.source_id);
+        assert.ok(source, `Source ${citation.source_id} must exist`);
+        assert.equal(
+          source.text.slice(citation.start_offset, citation.end_offset),
+          citation.excerpt,
+          "Stone citation excerpt must match source text verbatim",
+        );
+      }
+    }
+  }
+  const stoneEvidence = mockArchiveAdapter.getEvidence(stoneRun.id, "cit-stone-rag-1");
+  assert.ok(stoneEvidence, "Stone evidence lookup must resolve");
+  assert.equal(stoneEvidence.source.book_short, "Stone");
+
+  // Feature F3: Scope restrictions & helpful guidance
+  const erisedMismatchedScope = await mockArchiveAdapter.createRun(
+    {
+      question: MIRROR_OF_ERISED_QUESTION,
+      mode: "compare",
+      corpus_id: "harry-potter-archive",
+      corpus_version: "vol-3-poa",
+    },
+    ["vol-3"],
+  );
+  assert.equal(erisedMismatchedScope.branches[0].insufficient_evidence, true);
+  assert.ok(
+    erisedMismatchedScope.branches[0].introduction.includes("Volume I"),
+    "Guidance must mention Volume I",
+  );
+
+  const maraudersMismatchedScope = await mockArchiveAdapter.createRun(
+    {
+      question: MARAUDERS_MAP_QUESTION,
+      mode: "compare",
+      corpus_id: "harry-potter-archive",
+      corpus_version: "vol-1-ps",
+    },
+    ["vol-1"],
+  );
+  assert.equal(maraudersMismatchedScope.branches[0].insufficient_evidence, true);
+  assert.ok(
+    maraudersMismatchedScope.branches[0].introduction.includes("Volume III"),
+    "Guidance must mention Volume III",
+  );
+
   console.log(
     "Inquiry lifecycle, progressive branches, stale responses, 90-second cancellation, scoped evidence, HTTP reconnection and server cancellation: passed.",
   );

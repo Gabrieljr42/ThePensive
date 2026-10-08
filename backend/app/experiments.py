@@ -23,7 +23,10 @@ class ExperimentService:
         corpus = get_corpus(request.corpus_id)
         if corpus is None:
             raise ValueError("The selected collection is not available.")
-        if corpus.version != request.corpus_version:
+        valid_versions = {corpus.version}
+        if corpus.id == "harry-potter-archive":
+            valid_versions.update({"vol-1-ps", "vol-3-poa", "1997-2007-chronicles"})
+        if request.corpus_version not in valid_versions:
             raise ValueError("The collection version has changed. Select the collection again.")
         run_id = str(uuid4())
         methods = (
@@ -32,6 +35,7 @@ class ExperimentService:
             else [Method(request.mode.value)]
         )
         run = ExperimentRun(
+            schema_version="1.0",
             id=run_id,
             question=request.question,
             mode=request.mode,
@@ -41,7 +45,7 @@ class ExperimentService:
             status="complete" if preview else "running",
             configuration=RunConfiguration(
                 corpus_id=corpus.id,
-                corpus_version=corpus.version,
+                corpus_version=request.corpus_version,
                 scope_label=f"All {corpus.source_count} companion passages"
                 if corpus.id == "wizarding-notes"
                 else f"All {corpus.source_count} original passages",
@@ -59,7 +63,7 @@ class ExperimentService:
 
     def view(self, run_id: str) -> ExperimentRun | None:
         run = self.repository.get(run_id)
-        if run is None or run.is_preview or run.status == "cancelled":
+        if run is None or run.is_preview or run.status in ("complete", "cancelled"):
             return run
         elapsed = (datetime.now(UTC) - run.created_at).total_seconds()
         for branch in run.branches:
@@ -85,6 +89,8 @@ class ExperimentService:
             if all(branch.status == BranchStatus.COMPLETE for branch in run.branches)
             else "running"
         )
+        if run.status == "complete":
+            self.repository.save(run)
         return run
 
     def cancel(self, run_id: str) -> ExperimentRun | None:

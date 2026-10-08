@@ -12,6 +12,7 @@ export type EvidenceResponse = components["schemas"]["EvidenceResponse"];
 export type Mode = components["schemas"]["Mode"];
 export type Method = components["schemas"]["Method"];
 export type ApiProblem = components["schemas"]["ApiProblem"];
+export type RunEstimate = components["schemas"]["RunEstimate"];
 
 // UI selection state points at API objects; it never fabricates source metadata.
 export type EvidenceSelection = {

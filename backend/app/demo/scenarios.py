@@ -122,6 +122,71 @@ def make_branch(corpus_id: str, question: str, method: Method, run_id: str) -> B
             )
         ]
         conclusion = "An unanswered question remains an invitation to find evidence."
+    elif key == "marauder":
+        title = (
+            "The Bequest of the Four Wanderers"
+            if rag
+            else "The Complete Provenance of the Parchment"
+        )
+        introduction = (
+            "Through selective vector retrieval of the third chronicle, the origin and "
+            "authorship of the parchment resolve across three decisive encounters."
+            if rag
+            else "Holding the entire third volume within active attention reveals both the "
+            "original gift and the complete narrative arc of the map's ownership."
+        )
+        claims = [
+            (
+                "Harry acquired the Marauder's Map during his third year when Fred and "
+                "George Weasley gifted it to him in an abandoned classroom, having stolen it "
+                "from Filch's office four years prior.",
+                "src-poa-ch10-gift",
+                "Fred and George pulled Harry into an empty classroom before the Hogsmeade "
+                "excursion. They unfurled a square, worn parchment that appeared completely "
+                "blank, explaining that they had nicked it from Argus Filch's filing cabinet "
+                "during their first winter at the school.",
+            ),
+            (
+                "The parchment was inscribed by four enigmatic creators styling themselves "
+                "Messrs Moony, Wormtail, Padfoot, and Prongs, Purveyors of Aids to Magical "
+                "Mischief-Makers.",
+                "src-poa-ch10-creators",
+                "Messrs Moony, Wormtail, Padfoot, and Prongs, Purveyors of Aids to Magical "
+                "Mischief-Makers, are proud to present the Marauder's Map.",
+            ),
+            (
+                "The four creators were revealed as Remus Lupin (Moony), Peter Pettigrew "
+                "(Wormtail), Sirius Black (Padfoot), and James Potter (Prongs), who created "
+                "it after learning animagus transformations.",
+                "src-poa-ch18-identities",
+                "He was Moony, so titled due to his monthly lycanthropic torment. James "
+                "Potter transformed into a great stag and earned the name Prongs; Sirius "
+                "Black became a massive black dog known as Padfoot; and Peter Pettigrew "
+                "assumed the shape of a rat called Wormtail.",
+            ),
+        ]
+        if not rag:
+            claims.append(
+                (
+                    "Crucially, after Lupin later confiscated the map during the term, he "
+                    "formally restored it to Harry in his private study upon resigning, "
+                    "cementing Harry's permanent ownership.",
+                    "src-poa-ch22-return",
+                    "Along with the Invisibility Cloak, Lupin placed the blank Marauder's "
+                    "Map back into Harry's hands. Lupin remarked that having surrendered his "
+                    "post as instructor, he felt no lingering compunction against returning "
+                    "the enchanted parchment created by Harry's father and his companions.",
+                )
+            )
+        conclusion = (
+            "RAG successfully isolated the moment of bestowal and the revelation of "
+            "authorship, but its retrieval boundary excluded the parchment's subsequent "
+            "confiscation and final return."
+            if rag
+            else "Full context synthesized the entire timeline: discovery, transmission, secret "
+            "revelation, and Lupin's closing restoration — at the expense of ~58× higher "
+            "token volume."
+        )
     else:
         title = "A question still open"
         introduction = "This demonstration has no prepared, supported answer for that question."

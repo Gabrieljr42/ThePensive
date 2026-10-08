@@ -54,8 +54,11 @@ export function EvidenceLeaf() {
   if (!isVisible || !activeEvidence) return null;
 
   const { source, citation, claim } = activeEvidence;
-  const quoteStart = source.text.indexOf(citation.excerpt);
-  const exact = quoteStart >= 0 && citation.excerpt.length > 0;
+  const characters = Array.from(source.text);
+  const before = characters.slice(0, citation.start_offset).join("");
+  const resolved = characters.slice(citation.start_offset, citation.end_offset).join("");
+  const after = characters.slice(citation.end_offset).join("");
+  const exact = resolved === citation.excerpt && citation.excerpt.length > 0;
 
   const handleDismiss = () => {
     setPinnedCitation(null);
@@ -92,7 +95,7 @@ export function EvidenceLeaf() {
             </h2>
             <span className="font-mono text-[10px] text-[#6d5f49]">
               Chapter {source.chapter_number}: {source.chapter} · Page{" "}
-              {source.page_label} (illustrative)
+              {source.page_label} {source.page_kind === "demo_folio" ? "(illustrative)" : "(PDF)"}
             </span>
           </div>
 
@@ -100,7 +103,7 @@ export function EvidenceLeaf() {
             type="button"
             onClick={handleDismiss}
             aria-label="Dismiss evidence leaf"
-            className="p-1 rounded-xs hover:bg-[#8a671d]/15 text-[#5e513e] font-mono text-sm leading-none transition-colors"
+            className="touch-target-44 flex items-center justify-center min-w-[44px] min-h-[44px] -mr-2 -mt-2 p-2 rounded-xs hover:bg-[#8a671d]/15 text-[#5e513e] font-mono text-base leading-none transition-colors cursor-pointer touch-manipulation"
           >
             ✕
           </button>
@@ -111,9 +114,9 @@ export function EvidenceLeaf() {
           <p className="font-reading text-sm sm:text-base leading-relaxed text-[#231f28]">
             {exact ? (
               <>
-                {source.text.slice(0, quoteStart)}
+                {before}
                 <mark className="evidence-highlight">{citation.excerpt}</mark>
-                {source.text.slice(quoteStart + citation.excerpt.length)}
+                {after}
               </>
             ) : (
               source.text
@@ -138,7 +141,7 @@ export function EvidenceLeaf() {
           <button
             type="button"
             onClick={handleDismiss}
-            className="text-[#8a671d] hover:underline"
+            className="touch-target-44 inline-flex items-center min-h-[44px] py-2 px-2 text-[#8a671d] hover:underline cursor-pointer touch-manipulation"
           >
             Return to tomes (Esc) →
           </button>

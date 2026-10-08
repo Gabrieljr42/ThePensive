@@ -17,16 +17,17 @@ export function GutterScale({ ragBranch, fullBranch }: GutterScaleProps) {
 
   const ragTokens = ragBranch.metrics.input_tokens;
   const fullTokens = fullBranch.metrics.input_tokens;
-  const ragLatency = ragBranch.metrics.latency_ms ?? 0;
-  const fullLatency = fullBranch.metrics.latency_ms ?? 0;
-  const ragSec = (ragLatency / 1000).toFixed(2);
-  const fullSec = (fullLatency / 1000).toFixed(2);
-  const ragPrice = ragBranch.metrics.estimated_cost_usd ?? 0;
-  const fullPrice = fullBranch.metrics.estimated_cost_usd ?? 0;
-  const ragCost = ragPrice.toFixed(4);
-  const fullCost = fullPrice.toFixed(3);
+  const ragLatency = ragBranch.metrics.latency_ms;
+  const fullLatency = fullBranch.metrics.latency_ms;
+  const ragSec = ragLatency == null ? "—" : (ragLatency / 1000).toFixed(2) + "s";
+  const fullSec = fullLatency == null ? "—" : (fullLatency / 1000).toFixed(2) + "s";
+  const ragPrice = ragBranch.metrics.estimated_cost_usd;
+  const fullPrice = fullBranch.metrics.estimated_cost_usd;
+  const ragCost = ragPrice == null ? "—" : "$" + ragPrice.toFixed(4);
+  const fullCost = fullPrice == null ? "—" : "$" + fullPrice.toFixed(4);
+  const costLabel = ragBranch.metrics.basis === "illustrative" ? "illustrative cost" : "estimated API cost";
   const ragLatencyShare =
-    (ragLatency / Math.max(1, ragLatency + fullLatency)) * 100;
+    ragLatency == null || fullLatency == null ? null : (ragLatency / Math.max(1, ragLatency + fullLatency)) * 100;
   const ragTokenShare = (ragTokens / Math.max(1, ragTokens + fullTokens)) * 100;
 
   return (
@@ -45,11 +46,11 @@ export function GutterScale({ ragBranch, fullBranch }: GutterScaleProps) {
       <div className="flex flex-col items-center gap-1.5 w-full my-3">
         <span className="text-[9px] uppercase text-[#6d7d8c]">LATENCY</span>
         <div className="flex items-center justify-between w-full px-1">
-          <span className="text-[#f5b041]">{ragSec}s</span>
+          <span className="text-[#f5b041]">{ragSec}</span>
           <span className="text-[#556370]">/</span>
-          <span className="text-[#88c4e0]">{fullSec}s</span>
+          <span className="text-[#88c4e0]">{fullSec}</span>
         </div>
-        <div className="w-full h-1 bg-[#1a2330] rounded-full overflow-hidden flex">
+        {ragLatencyShare != null && <div className="w-full h-1 bg-[#1a2330] rounded-full overflow-hidden flex">
           <div
             className="h-full bg-[#f5b041]"
             style={{ width: ragLatencyShare + "%" }}
@@ -58,7 +59,7 @@ export function GutterScale({ ragBranch, fullBranch }: GutterScaleProps) {
             className="h-full bg-[#88c4e0]"
             style={{ width: 100 - ragLatencyShare + "%" }}
           />
-        </div>
+        </div>}
       </div>
 
       {/* Token Context Scale */}
@@ -94,14 +95,14 @@ export function GutterScale({ ragBranch, fullBranch }: GutterScaleProps) {
       <div className="flex flex-col items-center gap-1.5 w-full my-3">
         <span className="text-[9px] uppercase text-[#6d7d8c]">EST. COST</span>
         <div className="flex items-center justify-between w-full px-1">
-          <span className="text-[#f5b041]">${ragCost}</span>
+          <span className="text-[#f5b041]">{ragCost}</span>
           <span className="text-[#556370]">/</span>
-          <span className="text-[#88c4e0]">${fullCost}</span>
+          <span className="text-[#88c4e0]">{fullCost}</span>
         </div>
         <span className="text-[8px] text-[#b5bfc4]">
-          {ragPrice > 0
-            ? "~" + Math.round(fullPrice / ragPrice) + "× illustrative cost"
-            : "Illustrative cost"}
+          {ragPrice != null && fullPrice != null && ragPrice > 0
+            ? "~" + Math.round(fullPrice / ragPrice) + "× " + costLabel
+            : costLabel}
         </span>
       </div>
 

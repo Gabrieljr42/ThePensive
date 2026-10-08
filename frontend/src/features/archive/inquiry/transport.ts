@@ -1,4 +1,4 @@
-import type { RunRequest } from "@/lib/contracts";
+import type { RunRequest, RunEstimate } from "@/lib/contracts";
 import type { ArchiveRun, ArchiveBranch } from "../model";
 import { mockArchiveAdapter } from "../mock/adapter";
 
@@ -60,6 +60,7 @@ function pending(branch: ArchiveBranch): ArchiveBranch {
     },
     metrics: {
       basis: "illustrative",
+      usage_status: "unknown",
       latency_ms: null,
       input_tokens: null,
       output_tokens: null,
@@ -158,6 +159,7 @@ export const demoInquiryTransport: InquiryTransport = {
 export function createHttpInquiryTransport(base = "/api"): InquiryTransport {
   return {
     async *watch(request, volumes, signal) {
+      const body = { ...request, idempotency_key: request.idempotency_key ?? crypto.randomUUID() };
       let runId: string | null = null;
       let terminal = false;
       const read = async (path: string, init: RequestInit = {}) => {
@@ -167,18 +169,41 @@ export function createHttpInquiryTransport(base = "/api"): InquiryTransport {
           signal,
           headers: { "Content-Type": "application/json", ...init.headers },
         });
-        if (!response.ok)
-          throw new Error("The archive could not complete this inquiry.");
+        if (!response.ok) {
+          const problem = await response.json().catch(() => null);
+          throw new Error(problem?.message ?? "The archive could not complete this inquiry.");
+        }
         const run = (await response.json()) as ArchiveRun;
-        if (run.schema_version !== "1.0")
+        if (!["1.0", "2.0"].includes(run.schema_version))
           throw new Error("Refresh the archive to use this response version.");
         return { ...run, scopeVolumeIds: run.scopeVolumeIds ?? volumes };
       };
       try {
-        let run = await read("/runs", {
-          method: "POST",
-          body: JSON.stringify(request),
-        });
+        if (body.corpus_version.startsWith("pdf-")) {
+          const response = await fetch(base + "/runs/estimate", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body), signal, cache: "no-store",
+          });
+          const estimate = (await response.json()) as RunEstimate & { message?: string };
+          if (!response.ok) throw new Error(estimate.message ?? "The inquiry could not be checked.");
+          const blocked = estimate.branches.find((branch) => !branch.eligible);
+          if (blocked) throw new Error(blocked.reason ?? "Select a smaller scope.");
+          if (!estimate.live_available) throw new Error("Live inquiries are not enabled.");
+          if (estimate.maximum_cost_usd > estimate.available_budget_usd)
+            throw new Error("The archive's remaining API budget is insufficient for this inquiry.");
+        }
+        let created: ArchiveRun | null = null;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            created = await read("/runs", { method: "POST", body: JSON.stringify(body) });
+            break;
+          } catch (error) {
+            if (signal.aborted || attempt === 2 || !(error instanceof TypeError || error instanceof SyntaxError)) throw error;
+            await abortableDelay(500 * (attempt + 1), signal);
+          }
+        }
+        if (!created) throw new Error("The inquiry could not be created.");
+        let run = created;
         runId = run.id;
         for (;;) {
           terminal = run.status !== "running";
