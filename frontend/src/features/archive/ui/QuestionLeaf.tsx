@@ -23,6 +23,8 @@ export function QuestionLeaf() {
   const error = useArchiveStore((s) => s.error);
   const corpus = useArchiveStore((s) => s.corpus);
   const selectedChapterIds = useArchiveStore((s) => s.selectedChapterIds);
+  const availability = useArchiveStore((s) => s.availability);
+  const availabilityError = useArchiveStore((s) => s.availabilityError);
 
   // Register anchor for the cast thread
   useEffect(() => {
@@ -37,7 +39,8 @@ export function QuestionLeaf() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (isBusy || !question.trim()) return;
+    if (isBusy || !question.trim() || availability === "checking" || availability === "unavailable") return;
+    if (corpus && !selectedChapterIds.length) return;
 
     const isVol1 =
       selectedVolumeIds.includes("vol-1") &&
@@ -47,15 +50,22 @@ export function QuestionLeaf() {
       {
         question: question.trim(),
         mode,
-        corpus_id: "harry-potter-archive",
+        corpus_id: corpus?.id ?? "harry-potter-archive",
         corpus_version: corpus?.version ?? (isVol1 ? "vol-1-ps" : "vol-3-poa"),
-        ...(corpus ? { book_ids: selectedVolumeIds, chapter_ids: selectedChapterIds } : {}),
+        ...(corpus ? {
+          book_ids: (corpus.books ?? [])
+            .filter((book) => selectedChapterIds.some((chapterId) =>
+              book.chapters.some((chapter) => chapter.id === chapterId),
+            ))
+            .map((book) => book.id),
+          chapter_ids: selectedChapterIds,
+        } : {}),
       },
       selectedVolumeIds,
     );
   };
 
-  const suggestions = [
+  const demoSuggestions = [
     {
       label: "The Marauder's Map",
       q: MARAUDERS_MAP_QUESTION,
@@ -72,6 +82,11 @@ export function QuestionLeaf() {
       volumeId: "vol-1",
     },
   ];
+  const suggestions: { label: string; q: string; volumeId?: string }[] = corpus
+    ? corpus.examples.map((example) => ({ label: example.label, q: example.question }))
+    : availability === "demo"
+      ? demoSuggestions
+      : [];
 
   return (
     <div className="question-manuscript relative w-full deckle-paper">
@@ -87,9 +102,21 @@ export function QuestionLeaf() {
 
       <form onSubmit={handleSubmit} className="mt-4" aria-busy={isBusy}>
         <p className="mb-3 font-mono text-[10px] text-[#63553e]">
-          {corpus ? "Live inquiry · supplied English PDF · measured API usage" : "Recorded demonstration · prepared answers and illustrative measurements"}
+          {availability === "checking"
+            ? "Checking archive availability…"
+            : availability === "unavailable"
+              ? "Live archive unavailable"
+              : availability === "live"
+                ? "Live inquiry · supplied English PDF · measured API usage"
+                : "Recorded demonstration · prepared answers and illustrative measurements"}
         </p>
+        {availabilityError && <p role="alert" className="inquiry-error">{availabilityError}</p>}
         <ScopePicker />
+        {corpus && !suggestions.length && (
+          <p className="mt-3 text-xs text-[#63553e]">
+            This corpus has no catalogue questions. Choose chapters and write a question.
+          </p>
+        )}
         {/* Ruled Manuscript Writing Area */}
         <div className="relative">
           <label htmlFor="archive-inquiry-input" className="sr-only">
@@ -113,7 +140,7 @@ export function QuestionLeaf() {
         </div>
 
         {/* Suggestion Pills */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        {suggestions.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="font-mono text-[10px] tracking-wider text-[#73634e] uppercase mr-1">
             Catalogued Curiosities:
           </span>
@@ -124,7 +151,7 @@ export function QuestionLeaf() {
               disabled={isBusy}
               onClick={() => {
                 setQuestion(item.q);
-                if (!selectedVolumeIds.includes(item.volumeId)) {
+                if (!corpus && item.volumeId && !selectedVolumeIds.includes(item.volumeId)) {
                   selectSingleVolume(item.volumeId);
                 }
               }}
@@ -133,7 +160,7 @@ export function QuestionLeaf() {
               {item.label}
             </button>
           ))}
-        </div>
+        </div>}
 
         {/* Action Bottom Row with Wax Seal Submit */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4 pt-2">
@@ -158,7 +185,7 @@ export function QuestionLeaf() {
           <button
             ref={sealRef}
             type="submit"
-            disabled={isBusy}
+            disabled={isBusy || availability === "checking" || availability === "unavailable" || (Boolean(corpus) && selectedChapterIds.length === 0)}
             className="group relative inline-flex items-center gap-3 px-6 py-2.5 rounded-xs bg-gradient-to-r from-[#6e1e1b] via-[#852521] to-[#6e1e1b] hover:from-[#7e221f] hover:to-[#7e221f] text-[#faedd9] font-mono text-xs tracking-widest uppercase font-semibold shadow-[0_4px_16px_rgba(110,30,27,0.4)] border border-[#a83a34] transition-all duration-200 active:scale-95 disabled:opacity-60"
           >
             <span className="text-[#e89a95] group-hover:rotate-45 transition-transform duration-300">
@@ -175,6 +202,11 @@ export function QuestionLeaf() {
       {error && (
         <p role="alert" className="inquiry-error">
           {error}
+        </p>
+      )}
+      {corpus && selectedChapterIds.length === 0 && (
+        <p role="status" className="inquiry-error">
+          Select at least one available chapter. The live archive will not expand an empty scope.
         </p>
       )}
     </div>

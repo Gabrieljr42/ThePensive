@@ -63,6 +63,7 @@ export const archiveApi = {
     live_enabled: boolean;
     public_mode: boolean;
     public_chapter_limit: number;
+    full_context_token_limit?: number;
   }>("/status", { signal }),
   estimate: (body: RunRequest, signal?: AbortSignal) =>
     request<RunEstimate>("/runs/estimate", { method: "POST", body: JSON.stringify(body), signal }),

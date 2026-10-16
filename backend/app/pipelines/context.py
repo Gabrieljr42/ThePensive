@@ -4,7 +4,7 @@ from app.citations import resolve_citation
 from app.contracts import Claim, Corpus, RetrievalCandidate, RetrievalTrace, RunRequest
 from app.corpus import SourceRange, SourceUnit
 from app.errors import ArchiveProblem
-from app.pipelines.generation import ProposedAnswer
+from app.pipelines.generation import ProposedAnswer, offered_citations
 
 
 def resolve_scope(corpus: Corpus, request: RunRequest) -> tuple[list[str], list[str], str]:
@@ -66,11 +66,18 @@ def blocks_for_spans(units: list[SourceUnit], spans: list[SourceRange]) -> list[
 
 def rag_context(ranked, units: list[SourceUnit], embedding_model: str):
     selected, spans, tokens = [], [], 0
+    book_count = len({entry["chunk"].book_id for entry in ranked})
+    chunk_limit = min(20, 8 + 6 * max(0, book_count - 1))
+    token_limit = min(12000, 6000 + 3000 * max(0, book_count - 1))
+    if book_count > 1 and any(entry.get("temporal_focus") for entry in ranked):
+        # A cross-book synthesis needs several scenes, not only one nearby match.
+        # The scope remains the explicitly requested endings, bounded below full books.
+        chunk_limit, token_limit = 48, 28000
     for entry in ranked:
         chunk = entry["chunk"]
-        if len(selected) >= 8:
+        if len(selected) >= chunk_limit:
             break
-        if tokens + chunk.estimated_tokens > 6000:
+        if tokens + chunk.estimated_tokens > token_limit:
             continue
         # Skip a candidate if all of its ranges are already covered by earlier candidates.
         if all(
@@ -110,7 +117,9 @@ def rag_context(ranked, units: list[SourceUnit], embedding_model: str):
     trace = RetrievalTrace(
         candidates=candidates,
         retrievedChunkIds=selected,
-        reranker="Reciprocal rank fusion · no model reranker",
+        reranker="Book-balanced reciprocal rank fusion · " + (
+            "final-chapter focus · " if any(e.get("temporal_focus") for e in ranked) else ""
+        ) + "adjacent passage expansion",
         embeddingModel=embedding_model,
         topK=len(selected),
     )
@@ -128,21 +137,36 @@ def validate_answer(
         raise ValueError("A successful answer must contain cited claims.")
     sources = {unit.source.id: unit.source for unit in units}
     supplied = list({span.source_id for span in spans})
+    offered = offered_citations(blocks_for_spans(units, spans))
     claims, number = [], 0
     for claim_index, proposal in enumerate(answer.claims):
         citations = []
         for proposed in proposal.citations:
-            source = sources.get(proposed.source_id)
+            source_id, excerpt, start_offset = (
+                proposed.source_id, proposed.excerpt, proposed.start_offset
+            )
+            if proposed.quote_id is not None:
+                option = offered.get(proposed.quote_id)
+                if option is None:
+                    raise ValueError("The quotation option was not supplied to this method.")
+                if source_id is not None and source_id != option["source_id"]:
+                    raise ValueError("The quotation option belongs to a different source.")
+                source_id, excerpt, start_offset = (
+                    option["source_id"], option["excerpt"], option["start_offset"]
+                )
+            source = sources.get(source_id)
             if source is None or source.id not in supplied:
                 raise ValueError("The proposed source was not supplied to this method.")
+            if not excerpt:
+                raise ValueError("A citation must select an offered quotation.")
             number += 1
             citation = resolve_citation(
                 source,
-                proposed.excerpt,
+                excerpt,
                 f"{branch_id}:citation-{number}",
                 number,
                 supplied,
-                start_offset=proposed.start_offset,
+                start_offset=start_offset,
             )
             if not any(
                 span.source_id == source.id

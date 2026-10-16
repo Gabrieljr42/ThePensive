@@ -59,15 +59,46 @@ export function MidnightArchive({
   useEffect(() => {
     const abort = new AbortController();
     archiveApi.status(abort.signal).then(async (status) => {
-      if (!status.live_enabled) return;
+      if (!status.live_enabled) {
+        if (!abort.signal.aborted) {
+          useArchiveStore.getState().setAvailability("demo");
+          const { demoInquiryTransport } = await import("./inquiry/transport");
+          configureInquiryTransport(demoInquiryTransport);
+        }
+        return;
+      }
       const corpora = await archiveApi.corpora(abort.signal);
-      const corpus = corpora.find((item) => item.version.startsWith("pdf-"));
+      // /corpora is newest-first. Prefer the newest indexed PDF corpus with
+      // catalogue examples; otherwise use the newest indexed corpus with sources.
+      const indexed = corpora.filter((item) =>
+        item.version.startsWith("pdf-") &&
+        item.indexed &&
+        item.source_count > 0 &&
+        (item.books ?? []).some((book) =>
+          book.chapters.some((chapter) => chapter.source_count > 0),
+        ),
+      );
+      const corpus = indexed.find((item) => item.examples.length > 0) ?? indexed[0];
       if (corpus && !abort.signal.aborted) {
-        useArchiveStore.getState().loadCorpus(corpus, status.public_mode);
+        useArchiveStore.getState().loadCorpus(
+          corpus,
+          status.public_mode,
+          status.full_context_token_limit ?? 0,
+        );
         configureInquiryTransport(createHttpInquiryTransport());
+      } else if (!abort.signal.aborted) {
+        useArchiveStore.getState().setAvailability(
+          "unavailable",
+          "The live archive is reachable, but no indexed PDF corpus with sources is available.",
+        );
       }
     }).catch(() => {
-      // Recorded examples remain available if the live server cannot be reached.
+      if (!abort.signal.aborted) {
+        useArchiveStore.getState().setAvailability(
+          "unavailable",
+          "Live inquiries are temporarily unavailable. Reload to try again.",
+        );
+      }
     });
     return () => abort.abort();
   }, []);

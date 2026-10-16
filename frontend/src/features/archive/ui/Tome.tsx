@@ -49,7 +49,7 @@ export function Tome({ branch, isRag }: TomeProps) {
           <span className="uppercase text-[#362f26]">
             {isRag
               ? "The First Tome · Focused Retrieval"
-              : "The Second Tome · Whole Corpus Attention"}
+              : "The Second Tome · Complete Selected Scope"}
           </span>
         </div>
 
@@ -64,9 +64,9 @@ export function Tome({ branch, isRag }: TomeProps) {
           {branch.status !== "complete"
             ? "In progress"
             : isRag
-              ? branch.context.selected_source_count + " Filtered Passages"
+              ? branch.context.supplied_source_count + " Retrieved Passages"
               : branch.context.supplied_source_count > 0
-                ? "Prepared Volume Scope"
+                ? "Complete Selected Scope"
                 : "No prepared evidence"}
         </span>
       </div>
@@ -137,7 +137,7 @@ export function Tome({ branch, isRag }: TomeProps) {
           INPUT: {branch.metrics.input_tokens?.toLocaleString() ?? "—"} TOKENS
         </span>
         <span>
-          EST. COST:{" "}
+          Paid-tier estimate:{" "}
           {branch.metrics.estimated_cost_usd == null
             ? "—"
             : "$" + branch.metrics.estimated_cost_usd.toFixed(4)}

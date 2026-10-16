@@ -155,6 +155,7 @@ def create_app(
             "public_mode": settings.public_mode,
             "public_chapter_limit": settings.public_chapter_limit,
             "output_limit": settings.output_limit,
+            "full_context_token_limit": settings.full_context_token_limit,
         }
 
     @application.get("/api/corpora", response_model=list[Corpus], responses=errors)

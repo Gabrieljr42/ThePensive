@@ -4,7 +4,7 @@
 
 Creative recommendation: **The Midnight Archive** — a candlelit library opening onto a celestial observatory. Two illuminated tomes make the comparison visible; a thread of light connects an answer claim to its source passage.
 
-Status: **the memory chamber and cinematic descent are implemented.** The current Next.js archive uses a local progressive adapter with prepared answers. A snapshot transport can connect the same presentation to the separate FastAPI API; both currently use demonstration data. Source matching is functional, and the backend offers experiment storage.
+Status: **the archive has a live Gemini backend and a separate demonstration mode.** Gemini 3.1 Flash-Lite generates answers; Embedding 2 and pgvector retrieve passages. Factual answers receive a second review against the supplied sources before publication. The local private corpus contains the complete first three books, with 738 indexed chunks. The browser preserves the selected books and chapters and opens exact source passages from persisted runs.
 
 ## Enter the archive
 
@@ -22,16 +22,18 @@ The Compose stack contains Next.js, FastAPI, and PostgreSQL with pgvector. The d
 
 The threshold reveals the archive and offers an immediate path to the desk. Select an illuminated book, write a question on the manuscript, and choose RAG, Full Context, or Compare. Ask the Archive sends a thread into the basin and carries the camera through its silver surface into a memory interior. The first available method releases its reading tome while the other continues. A citation opens its source passage. Skip the animation to keep waiting at the desk, or cancel the inquiry separately.
 
-The current room displays seven illustrative Harry Potter volumes. Its prepared investigation concerns the Marauder's Map in Volume III; other questions or scopes produce an explicit unprepared-answer state. The backend separately retains the original companion-note and Lantern Ledger fixtures. Live literary ingestion and model generation remain future work.
+The room displays seven volumes. In live mode, only imported books and chapters are selectable. The local authorized corpus covers Volumes I–III; Volumes IV–VII remain unavailable. When live mode is disabled, prepared examples are explicitly labeled as demonstrations.
 
-**Mocked:** retrieval, reranking, model generation, generation timing, token usage, and API cost. **Functional:** HTTP contracts, corpus selection, run lifecycle, cancellation, exact quotation resolution, experiment-scoped evidence lookup, and PostgreSQL snapshot storage in Compose. Native backend development uses bounded memory storage when `DATABASE_URL` is unset.
+Live mode uses real retrieval, generation, provider token usage, and PostgreSQL persistence. Quotation locations are checked against the original supplied ranges; the additional model review assesses semantic support. Paid-tier cost estimates are accounting bounds, not proof of a charge. Demonstration mode retains simulated answers and metrics.
+
+Whole-book Full Context reached provider quota/service errors during the free-tier verification. The local frontend therefore limits Full Context input to 30,000 provider-counted tokens and offers a three-chapter shortcut. RAG can search all three imported books. See the [verification report](docs/verification/live-gemini-2026-10-11.md) for measured results and limits.
 
 ## Repository
 
 ```text
 frontend/             Next.js, TypeScript, Tailwind, Motion, components, browser tests
 backend/app/          FastAPI, contracts, original sources, mock engine, citations, repositories
-backend/app/pipelines/ Future ingestion, retrieval, generation, and evaluation boundaries
+backend/app/pipelines/ PDF ingestion, retrieval, generation, and source validation
 contracts/            Exported OpenAPI schema
 infra/                PostgreSQL and pgvector initialization
 scripts/              Contract export
@@ -71,7 +73,7 @@ The native production build uses `npm run build` followed by `npm start` in `fro
 
 Browser coverage includes automated accessibility scans, progressive methods, interruptions, exact citations and laboratory performance samples. Current implementation details and verification are recorded in [the descent report](docs/descent-implementation.md). Laboratory samples do not certify field Core Web Vitals or actual mobile GPU performance.
 
-Docker Compose configuration was validated, but the local Docker engine returned internal errors during the image build. Container runtime verification is outstanding; the native production application is available. No global Docker restart was performed.
+The local database runs in Docker and the application can run natively. Docker Desktop's temporary inference socket was recovered without removing the database volume. Building and running the complete container stack remains a separate deployment check.
 
 - [Immersive upgrade, references, and verification](docs/experience-upgrade.md)
 - [Descent preview with adjustable delays and failures](http://localhost:3000/lab/descent)
@@ -99,10 +101,10 @@ The working product name is **Pensieve**; **The Midnight Archive** is its visual
 ## Working assumptions
 
 - A solo-developer portfolio project with a modest public demo audience.
-- Next.js, TypeScript, Tailwind, and Motion own the interface; FastAPI/Python own source, experiment, and future AI responsibilities; PostgreSQL with pgvector is the backend data boundary.
-- Model and embedding choices will be selected against measured corpus sizes, availability, and budget when implementation begins.
-- Harry Potter book files and their editions have not yet been supplied. Exact pages and excerpts will come from validated ingestion of those files.
-- The current small original fixtures support the functional demonstration while literary ingestion remains a later milestone.
+- Next.js, TypeScript, Tailwind, and Motion own the interface; FastAPI/Python own source, experiment, and AI responsibilities; PostgreSQL with pgvector is the backend data boundary.
+- Live generation is pinned to Gemini 3.1 Flash-Lite and indexing to Gemini Embedding 2. Availability and quota depend on the configured Google project.
+- The supplied PDF is private. Source pages identify that PDF, rather than claiming a printed edition's pagination. Only the first three complete books are authorized for live processing in the current local corpus.
+- Small original fixtures support the separate functional demonstration.
 - Live runs and recorded demonstrations will carry explicit labels; benchmark conclusions will come from measured experiments.
 
 Planning date: **5 October 2026**.

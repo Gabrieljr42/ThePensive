@@ -8,7 +8,7 @@ from app.repository import MemoryRunRepository
 
 
 def test_consecutive_view_calls_transition_and_persist_completion():
-    """Test that multiple consecutive view calls accurately transition states and persist 'complete' to repository."""
+    """Consecutive view calls transition states and persist completion."""
     repository = MemoryRunRepository()
     service = ExperimentService(repository)
 
@@ -74,7 +74,7 @@ def test_consecutive_view_calls_transition_and_persist_completion():
 
 
 def test_independent_service_instances_share_persisted_state():
-    """Verify that a second, newly-instantiated ExperimentService reads persisted state from the shared repository."""
+    """A second service reads persisted state from the shared repository."""
     repository = MemoryRunRepository()
     service1 = ExperimentService(repository)
 
@@ -137,7 +137,7 @@ def test_consecutive_cancellations_and_view_calls():
 
 
 def test_multiple_concurrent_runs_persist_independently():
-    """Test that multiple concurrent runs created across different threads and corpora persist independently."""
+    """Concurrent runs across threads and corpora persist independently."""
     repository = MemoryRunRepository()
     service = ExperimentService(repository)
 

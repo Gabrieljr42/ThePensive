@@ -1,10 +1,13 @@
 "use client";
 
 import { useArchiveStore } from "../store";
+import { bookIsAvailable } from "../scope";
 
 export function VolumeProxies() {
   const phase = useArchiveStore((s) => s.phase);
   const volumes = useArchiveStore((s) => s.volumes);
+  const corpus = useArchiveStore((s) => s.corpus);
+  const mode = useArchiveStore((s) => s.mode);
   const selectedVolumeIds = useArchiveStore((s) => s.selectedVolumeIds);
   const hoveredVolumeId = useArchiveStore((s) => s.hoveredVolumeId);
   const toggleVolume = useArchiveStore((s) => s.toggleVolume);
@@ -33,6 +36,7 @@ export function VolumeProxies() {
           {volumes.map((vol) => {
             const isSelected = selectedVolumeIds.includes(vol.id);
             const isHovered = hoveredVolumeId === vol.id;
+            const available = !corpus || bookIsAvailable(corpus, vol.id, mode);
 
             return (
               <button
@@ -40,7 +44,8 @@ export function VolumeProxies() {
                 type="button"
                 role="button"
                 aria-pressed={isSelected}
-                disabled={isBusy}
+                disabled={isBusy || !available}
+                title={!available ? "No source chapters are available for this method." : undefined}
                 onClick={() => toggleVolume(vol.id)}
                 onMouseEnter={() => setHoveredVolume(vol.id)}
                 onMouseLeave={() => setHoveredVolume(null)}
@@ -91,6 +96,9 @@ export function VolumeProxies() {
                   <span className="font-mono text-[9px] text-[#5e6b77]">
                     {vol.pages} pp
                   </span>
+                  {!available && (
+                    <span className="font-mono text-[9px] text-[#9a8064]">No sources</span>
+                  )}
                 </div>
               </button>
             );

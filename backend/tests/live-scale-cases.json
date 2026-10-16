@@ -1,0 +1,94 @@
+[
+  {
+    "id": "one-book-chess-crisis",
+    "question": "O que aconteceu no desafio de xadrez mágico diante da porta seguinte, e como isso afetou o grupo?",
+    "book_ids": ["vol-1"],
+    "facts": [
+      "ron|weasley",
+      "xadrez|tabuleiro",
+      "sacrific|se deixou capturar|ficou para tras",
+      "harry|potter",
+      "prosseg|avanc|passar|porta"
+    ],
+    "abstain": false,
+    "required_evidence_chapters": ["vol-1-ch-16"],
+    "expected_answer": "No tabuleiro de xadrez em tamanho real, Ron comandou as peças e se deixou capturar para abrir caminho. Harry e Hermione puderam continuar para a porta seguinte.",
+    "semantic_rubric": "A resposta deve explicar a partida como obstáculo real, identificar a decisão de Ron e ligar essa decisão à passagem de Harry e Hermione; a citação deve sustentar as ações descritas."
+  },
+  {
+    "id": "two-book-allies",
+    "question": "Como a ajuda de aliados contribui para Harry enfrentar as ameaças finais dos dois primeiros livros?",
+    "book_ids": ["vol-1", "vol-2"],
+    "facts": [
+      "ron|weasley",
+      "xadrez|tabuleiro",
+      "sacrific|se deixou capturar|ficou para tras",
+      "fawkes|fenix",
+      "espada",
+      "lagrimas?|cura|curou"
+    ],
+    "abstain": false,
+    "required_evidence_chapters": ["vol-1-ch-16", "vol-2-ch-17"],
+    "expected_answer": "No primeiro livro, Ron conduz o grupo pelo xadrez mágico e se sacrifica para que Harry e Hermione prossigam. No segundo, Fawkes leva a espada que Harry usa contra o basilisco e suas lágrimas curam o ferimento venenoso.",
+    "semantic_rubric": "A síntese deve distinguir a contribuição de Ron no primeiro livro da ajuda física de Fawkes no segundo; as citações devem apoiar cada ação e seu efeito, não apenas mencionar os personagens."
+  },
+  {
+    "id": "three-book-crisis-synthesis",
+    "forbidden_answer_patterns": [
+      "dumbledore.{0,60}(deu|da |entreg|fornec).{0,60}(vira-tempo|ampulheta)",
+      "sapato.{0,80}(dobby|diario)|(dobby|diario).{0,80}sapato"
+    ],
+    "question": "Como a ajuda de aliados muda nas crises finais dos três livros, e o que ela permite que Harry ou seus amigos façam?",
+    "book_ids": ["vol-1", "vol-2", "vol-3"],
+    "facts": [
+      "ron|weasley",
+      "xadrez|tabuleiro",
+      "hermione",
+      "fawkes|fenix",
+      "espada|basilisco",
+      "lagrimas?|cura|curou",
+      "vira-tempo|ampulheta|volta no tempo|tempo",
+      "buckbeak|bicuco|hipogrifo",
+      "sirius"
+    ],
+    "abstain": false,
+    "required_evidence_chapter_groups": [
+      ["vol-1-ch-16"],
+      ["vol-2-ch-17"],
+      ["vol-3-ch-21", "vol-3-ch-22"]
+    ],
+    "expected_answer": "No primeiro livro, Ron se sacrifica no xadrez e Hermione ajuda a superar as defesas, permitindo que Harry continue. No segundo, Fawkes traz a espada para Harry e o cura com suas lágrimas. No terceiro, Hermione usa o Vira-Tempo para que ela e Harry salvem Bicuço e ajudem Sirius a escapar.",
+    "semantic_rubric": "A resposta precisa apresentar evidência específica dos três volumes e explicar resultados: avanço após os desafios, sobrevivência ao basilisco e fuga de Sirius com Bicuço. Cada trecho citado deve sustentar a ação atribuída ao respectivo aliado."
+  },
+  {
+    "id": "one-book-excluded-basilisk",
+    "question": "Que criatura Harry enfrenta ao resgatar Ginny na Câmara Secreta, e como consegue derrotá-la?",
+    "book_ids": ["vol-1"],
+    "facts": [],
+    "abstain": true,
+    "expected_answer": null,
+    "semantic_rubric": "Embora Ginny seja mencionada no primeiro livro, ele não contém o resgate na Câmara Secreta nem identifica a criatura ou o método usado. A resposta deve reconhecer a falta de evidência no escopo, sem importar a solução do segundo livro.",
+    "excluded_ambiguous_variant": {
+      "question": "Que criatura Harry enfrenta no confronto decisivo com uma colega que tenta salvar, e como consegue derrotá-la?",
+      "reason": "Ambígua: não identifica a cena fora do escopo e levou a uma resposta sobre Quirrell apoiada no capítulo 17 do primeiro livro. Mantida como nota fora da suite qualificadora."
+    }
+  },
+  {
+    "id": "two-book-excluded-patronus",
+    "question": "Que forma Harry aprende a conjurar para afastar os dementadores junto ao lago?",
+    "book_ids": ["vol-1", "vol-2"],
+    "facts": [],
+    "abstain": true,
+    "expected_answer": null,
+    "semantic_rubric": "A resposta sobre o feitiço e a forma conjurada está fora dos dois livros selecionados. Deve abster-se, sem afirmar que a ausência de evidência prova que o evento nunca ocorreu."
+  },
+  {
+    "id": "three-book-unreported-enrollment",
+    "question": "Quantos estudantes estavam matriculados em Hogwarts quando Harry começou o terceiro ano?",
+    "book_ids": ["vol-1", "vol-2", "vol-3"],
+    "facts": [],
+    "abstain": true,
+    "expected_answer": null,
+    "semantic_rubric": "Os três livros não informam o total de estudantes matriculados. A resposta deve abster-se por falta de evidência, sem estimar um número a partir de referências gerais à escola."
+  }
+]

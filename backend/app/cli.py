@@ -3,6 +3,7 @@
 import argparse
 import json
 import shutil
+import time
 from pathlib import Path
 
 from app.corpus import CorpusBundle
@@ -13,8 +14,29 @@ from app.pipelines.ingestion import extract_pdf, inspect_pdf, validate_bundle
 from app.settings import Settings
 
 
+def _is_explicit_http_429(error: Exception) -> bool:
+    """Recognize a received 429 response; transport failures remain uncertain."""
+    response = getattr(error, "response", None)
+    return getattr(error, "code", None) == 429 or getattr(response, "status_code", None) == 429
+
+
+def _settle_no_call(repository, reservations):
+    for ledger_id, _ in reservations:
+        repository.settle(ledger_id, 0, {"status": "no_provider_call"})
+
+
+def _settle_provider_failure(repository, reservations, error):
+    if _is_explicit_http_429(error):
+        for ledger_id, _ in reservations:
+            repository.settle(ledger_id, 0, {"status": "provider_rejected_http_429"})
+        return
+    for ledger_id, _ in reservations:
+        repository.settle(ledger_id, None, {"status": "embedding_consumption_unknown"})
+
+
 def index_corpus(
-    repository, settings, corpus_id, version, budget=1.0, provider=None, chapters=None
+    repository, settings, corpus_id, version, budget=1.0, provider=None, chapters=None,
+    batch_size=1, pause_seconds=0,
 ):
     if not settings.live_enabled or not settings.gemini_api_key:
         raise ValueError("Enable live mode and configure GEMINI_API_KEY before indexing.")
@@ -37,6 +59,51 @@ def index_corpus(
     own_provider = provider is None
     provider = provider or GeminiProvider(settings)
     try:
+        if not 1 <= batch_size <= 16 or pause_seconds < 0:
+            raise ValueError("Use a batch size from one to sixteen and a nonnegative pause.")
+        if batch_size > 1:
+            for begin in range(0, len(chunks), batch_size):
+                batch = chunks[begin:begin + batch_size]
+                reservations = []
+                try:
+                    for chunk in batch:
+                        reserved = embedding_reservation(chunk.text, chunk.chapter_id)
+                        ledger_id = repository.reserve_operation(
+                            "document_embedding", reserved,
+                            f"embedding:{settings.embedding_model}:{chunk.id}",
+                        )
+                        reservations.append((ledger_id, reserved))
+                except Exception:
+                    # The batch has not reached the provider. Release every earlier
+                    # reservation so a budget rejection cannot strand funds.
+                    _settle_no_call(repository, reservations)
+                    raise
+                try:
+                    vectors = provider.embed_documents([(c.text, c.chapter_id) for c in batch])
+                except Exception as error:
+                    _settle_provider_failure(repository, reservations, error)
+                    raise
+                try:
+                    for chunk, vector, (ledger_id, reserved) in zip(
+                        batch, vectors, reservations, strict=True
+                    ):
+                        repository.save_embedding(chunk, vector)
+                        repository.settle(ledger_id, reserved, {
+                            "basis": "utf8_byte_upper_bound", "model": settings.embedding_model,
+                            "chunk_id": chunk.id, "dimensions": len(vector),
+                        })
+                except Exception:
+                    for ledger_id, _ in reservations:
+                        repository.settle(
+                            ledger_id, None, {"status": "embedding_consumption_unknown"}
+                        )
+                    raise
+                repository.publish_index(corpus_id, version)
+                print(json.dumps({"indexed": min(begin + batch_size, len(chunks)),
+                                  "total": len(chunks)}), flush=True)
+                if pause_seconds and begin + batch_size < len(chunks):
+                    time.sleep(pause_seconds)
+            return {"indexed_chunks": len(chunks), "reservation_usd": expected}
         for index, chunk in enumerate(chunks, 1):
             reserved = embedding_reservation(chunk.text, chunk.chapter_id)
             ledger_id = repository.reserve_operation(
@@ -46,6 +113,10 @@ def index_corpus(
             )
             try:
                 vector = provider.embed(chunk.text, title=chunk.chapter_id)
+            except Exception as error:
+                _settle_provider_failure(repository, [(ledger_id, reserved)], error)
+                raise
+            try:
                 repository.save_embedding(chunk, vector)
                 repository.settle(
                     ledger_id,
@@ -86,6 +157,8 @@ def main():
     index.add_argument("version")
     index.add_argument("--budget", type=float, default=1.0)
     index.add_argument("--chapters", nargs="+")
+    index.add_argument("--batch-size", type=int, default=1)
+    index.add_argument("--pause-seconds", type=float, default=0)
     export = commands.add_parser("export")
     export.add_argument("corpus_id")
     export.add_argument("version")
@@ -146,6 +219,8 @@ def main():
                         args.version,
                         args.budget,
                         chapters=args.chapters,
+                        batch_size=args.batch_size,
+                        pause_seconds=args.pause_seconds,
                     )
                 )
             )

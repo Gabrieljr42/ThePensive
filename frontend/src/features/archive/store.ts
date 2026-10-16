@@ -11,6 +11,7 @@ import { ARCHIVE_VOLUMES } from "./mock/volumes";
 import { MARAUDERS_MAP_QUESTION } from "./mock/marauders-map";
 import { MIRROR_OF_ERISED_QUESTION } from "./mock/mirror-of-erised";
 import { PHILOSOPHERS_STONE_QUESTION } from "./mock/philosophers-stone";
+import { availableChapters, bookIsAvailable } from "./scope";
 import {
   createArchiveQualityState,
   noteDetectedTier,
@@ -23,9 +24,16 @@ import {
 interface ArchiveState {
   corpus: Corpus | null;
   publicMode: boolean;
+  availability: "checking" | "live" | "demo" | "unavailable";
+  availabilityError: string | null;
+  fullContextTokenLimit: number;
+  setAvailability: (
+    availability: ArchiveState["availability"],
+    message?: string | null,
+  ) => void;
   selectedChapterIds: string[];
   setSelectedChapters: (ids: string[]) => void;
-  loadCorpus: (corpus: Corpus, publicMode: boolean) => void;
+  loadCorpus: (corpus: Corpus, publicMode: boolean, fullContextTokenLimit?: number) => void;
   phase: ScenePhase;
   volumes: Volume[];
   selectedVolumeIds: string[];
@@ -89,21 +97,51 @@ interface ArchiveState {
 export const useArchiveStore = create<ArchiveState>((set) => ({
   corpus: null,
   publicMode: false,
+  availability: "checking",
+  availabilityError: null,
+  fullContextTokenLimit: 0,
+  setAvailability: (availability, availabilityError = null) =>
+    set(availability === "demo"
+      ? {
+          availability,
+          availabilityError,
+          corpus: null,
+          publicMode: false,
+          fullContextTokenLimit: 0,
+          selectedChapterIds: [],
+          selectedVolumeIds: ["vol-3"],
+          volumes: ARCHIVE_VOLUMES,
+        }
+      : { availability, availabilityError }),
   selectedChapterIds: [],
-  setSelectedChapters: (selectedChapterIds) => set({ selectedChapterIds }),
-  loadCorpus: (corpus, publicMode) => set((state) => {
+  setSelectedChapters: (selectedChapterIds) => set((state) => ({
+    selectedChapterIds: state.corpus
+      ? selectedChapterIds.filter((id) =>
+          state.selectedVolumeIds.some((bookId) =>
+            availableChapters(state.corpus!, bookId, state.mode).some((chapter) => chapter.id === id),
+          ),
+        )
+      : selectedChapterIds,
+  })),
+  loadCorpus: (corpus, publicMode, fullContextTokenLimit = 0) => set((state) => {
     const books = corpus.books ?? [];
-    const first = books.find((book) => book.chapters.some((chapter) => chapter.source_count));
+    const first = books.find((book) => bookIsAvailable(corpus, book.id, state.mode));
     return {
       corpus,
       publicMode,
+      fullContextTokenLimit,
+      availability: "live",
+      availabilityError: null,
       selectedVolumeIds: first ? [first.id] : [],
-      selectedChapterIds: first?.chapters.filter((chapter) => chapter.source_count).slice(0, 3).map((chapter) => chapter.id) ?? [],
+      selectedChapterIds: first
+        ? availableChapters(corpus, first.id, state.mode).slice(0, 3).map((chapter) => chapter.id)
+        : [],
       question: "How do the Dursleys react to the letters addressed to Harry?",
       isCustomQuestion: true,
       volumes: state.volumes.map((volume) => {
         const book = books.find((item) => item.id === volume.id);
         if (!book) return { ...volume, indexing: "pending" as const };
+        const sourceChapters = book.chapters.filter((chapter) => chapter.source_count > 0);
         return {
           ...volume,
           title: book.title,
@@ -111,7 +149,9 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
           chapters: book.chapters.length,
           chunks: book.chapters.reduce((sum, chapter) => sum + chapter.chunk_count, 0),
           tokens: book.chapters.reduce((sum, chapter) => sum + chapter.estimated_tokens, 0),
-          indexing: book.chapters.every((chapter) => chapter.indexed) ? "indexed" as const : "pending" as const,
+          indexing: sourceChapters.length > 0 && sourceChapters.every((chapter) => chapter.indexed)
+            ? "indexed" as const
+            : "pending" as const,
         };
       }),
     };
@@ -147,6 +187,7 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
 
   toggleVolume: (id) =>
     set((state) => {
+      if (state.corpus && !bookIsAvailable(state.corpus, id, state.mode)) return state;
       const exists = state.selectedVolumeIds.includes(id);
       if (exists) {
         // Keep at least one volume selected
@@ -159,14 +200,47 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
       return { selectedVolumeIds: [...state.selectedVolumeIds, id] };
     }),
 
-  selectSingleVolume: (id) => set((state) => ({
-    selectedVolumeIds: [id],
-    selectedChapterIds: state.selectedChapterIds.filter((chapter) => chapter.startsWith(id + "-ch-")),
-  })),
+  selectSingleVolume: (id) => set((state) => {
+    if (state.corpus && !bookIsAvailable(state.corpus, id, state.mode)) return state;
+    const chapters = state.corpus ? availableChapters(state.corpus, id, state.mode) : [];
+    const retained = state.selectedChapterIds.filter((chapter) =>
+      state.corpus
+        ? chapters.some((candidate) => candidate.id === chapter)
+        : chapter.startsWith(id + "-ch-"),
+    );
+    return {
+      selectedVolumeIds: [id],
+      selectedChapterIds: retained.length
+        ? retained
+        : chapters.slice(0, 3).map((chapter) => chapter.id),
+    };
+  }),
 
   setHoveredVolume: (id) => set({ hoveredVolumeId: id }),
 
-  setMode: (mode) => set({ mode }),
+  setMode: (mode) => set((state) => {
+    if (!state.corpus) return { mode };
+    const selectedVolumeIds = state.selectedVolumeIds.filter((id) =>
+      bookIsAvailable(state.corpus!, id, mode),
+    );
+    const nextVolumeIds = selectedVolumeIds.length
+      ? selectedVolumeIds
+      : (state.corpus.books ?? [])
+          .filter((book) => bookIsAvailable(state.corpus!, book.id, mode))
+          .slice(0, 1)
+          .map((book) => book.id);
+    let selectedChapterIds = state.selectedChapterIds.filter((id) =>
+      nextVolumeIds.some((bookId) =>
+        availableChapters(state.corpus!, bookId, mode).some((chapter) => chapter.id === id),
+      ),
+    );
+    if (state.selectedChapterIds.length && !selectedChapterIds.length && nextVolumeIds[0]) {
+      selectedChapterIds = availableChapters(state.corpus, nextVolumeIds[0], mode)
+        .slice(0, 3)
+        .map((chapter) => chapter.id);
+    }
+    return { mode, selectedVolumeIds: nextVolumeIds, selectedChapterIds };
+  }),
 
   setQuestion: (question) =>
     set({

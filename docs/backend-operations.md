@@ -3,7 +3,10 @@
 ## Runtime
 
 FastAPI owns the corpus, retrieval, generation, citation validation, and usage ledger. A separate
-Python worker leases at most two branches globally from PostgreSQL. The browser polls persisted
+Python worker leases at most two branches globally from PostgreSQL. Each factual branch generates
+an answer and then reviews it against the supplied sources that it cited. Only the reviewed answer
+is published. Abstentions with no claims skip the second call. Both generation receipts are saved,
+and usage metrics include both calls. The browser polls persisted
 snapshots, so provider execution survives a disconnected browser. Explicit cancellation stops
 further work and hides unfinished answers. A request already sent to Gemini may still be billed;
 unknown usage keeps its financial reservation.
@@ -25,7 +28,12 @@ changes require a new corpus version.
 ## Local setup
 
 Copy the root `.env.example` to `.env`. Configure `GEMINI_API_KEY` locally and set
-`PENSIEVE_LIVE_ENABLED=true` when ready for paid calls. Keep `PENSIEVE_PUBLIC_MODE=false` locally.
+`PENSIEVE_LIVE_ENABLED=true` when ready for real provider calls. Keep `PENSIEVE_PUBLIC_MODE=false`
+locally. The current local verification uses the user's free Gemini quota; enabling live mode does
+not configure Google billing. Set `PENSIEVE_FULL_CONTEXT_TOKEN_LIMIT=30000` for the verified local
+envelope. The cap counts the complete generation input before queuing; oversized Full Context
+requests are rejected instead of silently truncating the books. `0` disables this administrative
+cap but does not change Google quotas or the financial reservation limits.
 Docker Compose overrides DATABASE_URL with the internal database address; native Python uses
 127.0.0.1:5435. All exposed development ports bind only to 127.0.0.1.
 
@@ -42,7 +50,7 @@ python -m alembic upgrade head
 python -m app.cli inspect ../harrypotter.pdf
 python -m app.cli extract ../harrypotter.pdf --chapters vol-1-ch-1 vol-1-ch-2 vol-1-ch-3
 python -m app.cli import ../data/private/<version>.json
-python -m app.cli index harry-potter-archive <version> --budget 1
+python -m app.cli index harry-potter-archive <version> --budget 1 --batch-size 16 --pause-seconds 18
 python -m app.worker
 ```
 
@@ -50,15 +58,25 @@ Start `uvicorn app.main:app --reload --host 127.0.0.1 --port 8000` in another te
 `npm run dev` from `frontend/`. Live mode loads the imported catalog and adds an explicit chapter
 selector. When live mode is disabled, prepared examples remain clearly marked as demonstrations.
 
-Extract without `--chapters` to process all seven books. Reimporting a completed bundle does not
+Extract without `--chapters` to process all seven books locally. Obtain authorization for the
+specific texts before sending them to a provider; the current live corpus contains only Books
+I–III. Reimporting a completed bundle does not
 duplicate records. Indexing resumes only missing embeddings and refuses to repeat an uncertain
-paid attempt automatically. All original files, exports, source maps, and local session secrets
+provider attempt automatically. Explicit 429 rejections release the unused reservation and can
+be retried by an administrator; successful embeddings are not sent again. All original files,
+exports, source maps, and local session secrets
 belong in the ignored `data/private/` directory. No PDF or full source text belongs in public assets.
 
 The PDF extraction owns page/chapter provenance. Chapter opening drop capitals are reordered into
 the body while preserving a map to their original extracted positions. Page numbers identify this
 specific PDF, not an unverified printed edition. A citation must fit an exact range supplied to its
-branch; location verification does not assert semantic support.
+branch. The subsequent model review checks attribution, objects, negation, and uncertainty using
+only offered passages, retaining their original quotation identifiers. A `supported` label records
+that model assessment; exact location checks and model review do not prove every statement correct.
+
+RAG pools semantic and lexical candidates per selected book before combining and expanding adjacent
+chunks. Questions explicitly asking about final crises can focus on the last two chapters of each
+fully imported and fully selected book. Partial imports never stand in for the end of a book.
 
 ## Vercel and Railway
 
@@ -91,3 +109,16 @@ Frontend: regenerate contracts, run typecheck, lint, `node tests/inquiry-unit.mj
 browser question-to-evidence journey. Verify live Gemini separately using a small selected scope
 and the same financial ledger. A simulated provider test proves application behavior, not the
 quality or availability of Gemini itself.
+
+Opt-in real verification from `backend/`:
+
+```sh
+python scripts/verify_live_archive.py --version <indexed-version> --output ../data/private/live-check.json --pause-seconds 20
+python scripts/verify_live_archive.py --version <three-book-version> --suite tests/live-scale-cases.json --mode rag --output ../data/private/scale-check.json --pause-seconds 20
+```
+
+These checks create actual provider requests. They verify scope, expected facts/abstentions,
+quotation offsets, persisted context hashes, idempotency, ownership, evidence access, and returned
+usage. They keep failures in the private report. Whole-book Full Context was tested with complete
+source input but received 503/429 responses on the configured free quota; it is not approved for
+the current local UI. See [the verification report](verification/live-gemini-2026-10-11.md).

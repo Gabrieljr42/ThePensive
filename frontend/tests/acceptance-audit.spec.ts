@@ -3,6 +3,18 @@ import { MARAUDERS_MAP_QUESTION } from "../src/features/archive/mock/marauders-m
 import "./lab-window";
 
 test.describe("Tier 1 & Tier 2 Acceptance Audit Suite", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/api/status", (route) => route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        schema_version: "2.0",
+        live_enabled: false,
+        public_mode: false,
+        public_chapter_limit: 3,
+      }),
+    }));
+  });
+
   test.describe("Tier 1: Console Cleanliness & Asset Purity", () => {
     test("runtime captures zero uncaught errors and zero unhandled rejections across entrance and desk", async ({
       page,
@@ -231,7 +243,9 @@ test.describe("Tier 1 & Tier 2 Acceptance Audit Suite", () => {
         await expect(
           page.locator(".archive-tome").first().getByRole("heading").first(),
         ).not.toHaveText("Uncatalogued Inquiry");
-        await expect(page.locator(".tome-claim")).not.toHaveCount(0);
+        await expect(
+          page.locator(".archive-tome > div.flex.flex-col.gap-4 > div"),
+        ).not.toHaveCount(0);
         await expect(
           page.getByRole("button", { name: /Inspect citation/i }).first(),
         ).toBeVisible();
@@ -293,7 +307,9 @@ test.describe("Tier 1 & Tier 2 Acceptance Audit Suite", () => {
         await expect(
           page.locator(".archive-tome").first().getByRole("heading").first(),
         ).not.toHaveText("Uncatalogued Inquiry");
-        await expect(page.locator(".tome-claim")).not.toHaveCount(0);
+        await expect(
+          page.locator(".archive-tome > div.flex.flex-col.gap-4 > div"),
+        ).not.toHaveCount(0);
         await expect(
           page.getByRole("button", { name: /Inspect citation/i }).first(),
         ).toBeVisible();

@@ -1,6 +1,8 @@
 """Freeze scope and reserve budget before placing durable branch tasks in the queue."""
 
+import re
 import time
+import unicodedata
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -22,12 +24,13 @@ from app.errors import ArchiveProblem
 from app.live_repository import LiveRepository
 from app.pipelines.context import full_context, resolve_scope
 from app.pipelines.generation import (
-    PRICING_VERSION,
     PROMPT_VERSION,
+    REVIEW_INPUT_TOKEN_LIMIT,
     SYSTEM,
     ProposedAnswer,
     embedding_reservation,
     maximum_generation_cost,
+    pricing_version_for,
     prompt_for,
 )
 from app.settings import Settings
@@ -66,7 +69,18 @@ class LiveService:
         )
         estimates = []
         for method in methods:
-            tokens = full_tokens if method == Method.FULL_CONTEXT else 12000
+            # Reserve room for bounded multi-book evidence and its citation selectors.
+            rag_bound = 12000 if len(books) == 1 else 24000 if len(books) == 2 else 30000
+            question = "".join(
+                c
+                for c in unicodedata.normalize("NFKD", request.question.casefold())
+                if not unicodedata.combining(c)
+            )
+            if len(books) > 1 and re.search(
+                r"\b(final|finais|desfecho|desfechos|climax)\b", question
+            ):
+                rag_bound = 60000
+            tokens = full_tokens if method == Method.FULL_CONTEXT else rag_bound
             reason = None
             if method == Method.RAG and any(
                 not chapter.indexed
@@ -78,6 +92,13 @@ class LiveService:
             if method == Method.FULL_CONTEXT:
                 if tokens + self.settings.output_limit + 4096 > 1_048_576:
                     reason = "The complete scope exceeds the model's context capacity."
+                if self.settings.full_context_token_limit and tokens > (
+                    self.settings.full_context_token_limit
+                ):
+                    reason = (
+                        f"Full Context is limited to {self.settings.full_context_token_limit:,} "
+                        "input tokens in this archive. Select fewer chapters or use RAG."
+                    )
                 if self.settings.public_mode and (
                     len(chapters) > self.settings.public_chapter_limit
                     or tokens > self.settings.public_context_tokens
@@ -85,7 +106,11 @@ class LiveService:
                     reason = (
                         "Public comparisons accept up to three chapters and 30,000 input tokens."
                     )
-            cost = maximum_generation_cost(tokens, self.settings.output_limit)
+            cost = maximum_generation_cost(
+                tokens, self.settings.output_limit, self.settings.model
+            ) + maximum_generation_cost(
+                REVIEW_INPUT_TOKEN_LIMIT, self.settings.output_limit, self.settings.model
+            )
             if method == Method.RAG:
                 cost += embedding_reservation(request.question, query=True)
             estimates.append(
@@ -150,7 +175,7 @@ class LiveService:
             output_limit=self.settings.output_limit,
             book_ids=estimate.book_ids,
             chapter_ids=estimate.chapter_ids,
-            pricing_version=PRICING_VERSION,
+            pricing_version=pricing_version_for(self.settings.model),
         )
         configuration.configuration_hash = digest(configuration.model_dump())
         run = ExperimentRun(
