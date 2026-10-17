@@ -36,20 +36,39 @@ export interface SceneUniforms {
     castProgress: number; // 0..1
     evidenceProgress: number; // 0..1
   };
+  basin: { energy: number; ripple: number; hover: number; evidence: number };
+  dive: {
+    interior: number;
+    veil: number;
+    depression: number;
+    travel: number;
+    roomVisible: boolean;
+    mobileBlend: number;
+    walkTime: number;
+  };
 }
 
 export const sceneUniforms: SceneUniforms = {
+  dive: {
+    interior: 0,
+    veil: 0,
+    depression: 0,
+    travel: 0,
+    roomVisible: true,
+    mobileBlend: 1,
+    walkTime: 0,
+  },
   camera: {
-    x: 0,
-    y: 1.6,
-    z: 6.8, // Long aisle stacks threshold view
-    targetX: 0,
-    targetY: 0.75,
-    targetZ: 0,
-    fov: 46,
+    x: -0.2,
+    y: 2.4,
+    z: 5.8,
+    targetX: 0.1,
+    targetY: 0.85,
+    targetZ: -0.6,
+    fov: 44,
   },
   environment: {
-    darkness: 1, // Starts dark
+    darkness: 0.3,
     warmth: 0.1,
     hush: 0,
     beamIntensity: 0.85,
@@ -72,4 +91,5 @@ export const sceneUniforms: SceneUniforms = {
     castProgress: 0,
     evidenceProgress: 0,
   },
+  basin: { energy: 0.12, ripple: 0, hover: 0, evidence: 0 },
 };

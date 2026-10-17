@@ -9,13 +9,15 @@ def resolve_citation(
     citation_id: str,
     number: int,
     supplied_source_ids: list[str],
+    *,
+    start_offset: int | None = None,
 ) -> Citation:
     if source.id not in supplied_source_ids:
         raise ValueError("A citation must reference a source supplied to its branch.")
-    start = source.text.find(excerpt)
-    if not excerpt or start < 0:
+    start = source.text.find(excerpt) if start_offset is None else start_offset
+    if not excerpt or start < 0 or source.text[start : start + len(excerpt)] != excerpt:
         raise ValueError("The quotation does not occur in the declared source.")
-    if source.text.find(excerpt, start + 1) >= 0:
+    if start_offset is None and source.text.find(excerpt, start + 1) >= 0:
         raise ValueError("The quotation is ambiguous within the source passage.")
     return Citation(
         id=citation_id,

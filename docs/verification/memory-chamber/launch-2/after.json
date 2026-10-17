@@ -1,0 +1,27 @@
+{
+  "width": 1440,
+  "height": 1000,
+  "clientWidth": 1440,
+  "clientHeight": 1000,
+  "pixelRatio": 1,
+  "minLum": 1.1444,
+  "maxLum": 241.643,
+  "meanLum": 39.67338164444422,
+  "variance": 1372.760107172936,
+  "paintedFraction": 0.8616888888888888,
+  "bboxCoverage": 0.9864888888888889,
+  "hash": 1498613345,
+  "renderer": "WebKit WebGL",
+  "floorRange": 20.125307202184572,
+  "floorReversals": 2,
+  "shelfRange": 230.40016721411058,
+  "shelfReversals": 13,
+  "drawCalls": 100,
+  "triangles": 27568,
+  "surface": {
+    "left": 597.918864172152,
+    "right": 1225.1071504217734,
+    "top": 216.16191207884944,
+    "bottom": 323.46055442814816
+  }
+}

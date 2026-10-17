@@ -1,67 +1,47 @@
 "use client";
 
-import * as THREE from "three";
+import { CraftedBox } from "./CraftedBox";
+import { ArchiveMaterial } from "./ArchiveMaterial";
 
 export function Desk() {
   return (
-    <group position={[0, 0.48, 0.2]}>
-      {/* Main Polished Wood Tabletop */}
-      <mesh position={[0, 0, 0]} castShadow receiveShadow>
-        <boxGeometry args={[3.8, 0.08, 1.8]} />
-        <meshStandardMaterial
-          color="#150f0b"
-          roughness={0.42}
-          metalness={0.15}
-        />
-      </mesh>
-
-      {/* Brass Beveled Inlay Border */}
-      <mesh position={[0, 0.041, 0]} receiveShadow>
-        <planeGeometry args={[3.65, 1.65]} />
-        <meshStandardMaterial
-          color="#110c09"
-          roughness={0.38}
-          metalness={0.2}
-        />
-      </mesh>
-
-      {/* Fine Gold Inlay Filigree Wire Outline */}
-      <lineSegments position={[0, 0.043, 0]}>
-        <edgesGeometry args={[new THREE.PlaneGeometry(3.64, 1.64)]} />
-        <lineBasicMaterial color="#bda04a" />
-      </lineSegments>
-
-      {/* Turned Table Legs */}
-      <mesh position={[-1.7, -0.24, -0.7]} castShadow>
-        <cylinderGeometry args={[0.07, 0.09, 0.44, 12]} />
-        <meshStandardMaterial color="#100b08" roughness={0.7} />
-      </mesh>
-      <mesh position={[1.7, -0.24, -0.7]} castShadow>
-        <cylinderGeometry args={[0.07, 0.09, 0.44, 12]} />
-        <meshStandardMaterial color="#100b08" roughness={0.7} />
-      </mesh>
-      <mesh position={[-1.7, -0.24, 0.7]} castShadow>
-        <cylinderGeometry args={[0.07, 0.09, 0.44, 12]} />
-        <meshStandardMaterial color="#100b08" roughness={0.7} />
-      </mesh>
-      <mesh position={[1.7, -0.24, 0.7]} castShadow>
-        <cylinderGeometry args={[0.07, 0.09, 0.44, 12]} />
-        <meshStandardMaterial color="#100b08" roughness={0.7} />
-      </mesh>
-
-      {/* Oak Book Rack Base on Left Side */}
-      <mesh position={[-1.15, 0.05, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.15, 0.035, 0.45]} />
-        <meshStandardMaterial color="#1f1610" roughness={0.6} />
-      </mesh>
-      {/* Rack End Bookends */}
-      <mesh position={[-1.71, 0.16, 0]} castShadow>
-        <boxGeometry args={[0.03, 0.22, 0.44]} />
-        <meshStandardMaterial color="#2d2017" roughness={0.6} />
-      </mesh>
-      <mesh position={[-0.59, 0.16, 0]} castShadow>
-        <boxGeometry args={[0.03, 0.22, 0.44]} />
-        <meshStandardMaterial color="#2d2017" roughness={0.6} />
+    <group position={[0, 0.72, 0.35]}>
+      <CraftedBox size={[3.35, 0.12, 1.3]} radius={0.045} castShadow>
+        <ArchiveMaterial role="walnut" repeat={[2, 2]} />
+      </CraftedBox>
+      <CraftedBox
+        size={[3.42, 0.028, 1.36]}
+        position={[0, -0.04, 0]}
+        radius={0.015}
+      >
+        <ArchiveMaterial role="walnut" color="#4f3528" />
+      </CraftedBox>
+      <CraftedBox size={[2.9, 0.14, 0.045]} position={[0, -0.15, 0.54]}>
+        <ArchiveMaterial role="walnut" color="#52372a" />
+      </CraftedBox>
+      {[-1.38, 1.38].map((x) => (
+        <group key={x} position={[x, -0.39, 0]}>
+          <CraftedBox size={[0.17, 0.63, 0.86]} radius={0.035} castShadow>
+            <ArchiveMaterial role="walnut" color="#503527" repeat={[1, 2]} />
+          </CraftedBox>
+          <CraftedBox size={[0.28, 0.06, 1]} position={[0, -0.29, 0]}>
+            <ArchiveMaterial role="walnut" color="#503527" />
+          </CraftedBox>
+        </group>
+      ))}
+      <CraftedBox size={[2.8, 0.085, 0.085]} position={[0, -0.57, -0.2]}>
+        <ArchiveMaterial role="walnut" color="#503527" />
+      </CraftedBox>
+      <CraftedBox
+        size={[0.95, 0.012, 0.65]}
+        position={[0.38, 0.07, 0.03]}
+        rotation={[0, -0.12, 0]}
+      >
+        <ArchiveMaterial role="paper" color="#d6c9ab" />
+      </CraftedBox>
+      <mesh position={[0.89, 0.083, 0.22]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.044, 20]} />
+        <meshStandardMaterial color="#702a27" roughness={0.46} />
       </mesh>
     </group>
   );

@@ -19,24 +19,20 @@ export function InkText({ text, className = "", delayMs = 0 }: InkTextProps) {
     <span
       className={`inline transition-all duration-700 ease-out ${className}`}
       style={{
-        animation: `inkCondense 0.8s ease-out ${delayMs}ms forwards`,
+        animation: `inkCondense 0.25s ease-out ${Math.min(delayMs, 150)}ms both`,
       }}
     >
       {text}
       <style jsx>{`
         @keyframes inkCondense {
           0% {
-            opacity: 0.15;
-            filter: blur(3.5px);
-            color: #7a7082;
+            opacity: 0.7;
           }
           50% {
             opacity: 0.8;
-            filter: blur(1.2px);
           }
           100% {
             opacity: 1;
-            filter: blur(0);
           }
         }
       `}</style>

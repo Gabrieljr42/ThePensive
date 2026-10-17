@@ -1,11 +1,10 @@
 import type { Corpus, EvidenceResponse, RunRequest } from "@/lib/contracts";
-import type { ArchiveRun } from "../model";
+import type { ArchiveBranch, ArchiveRun } from "../model";
 import { ARCHIVE_VOLUMES } from "./volumes";
-import {
-  MARAUDERS_MAP_QUESTION,
-  MARAUDERS_MAP_RUN,
-  MARAUDERS_MAP_SOURCES,
-} from "./marauders-map";
+import { MARAUDERS_MAP_QUESTION, MARAUDERS_MAP_RUN } from "./marauders-map";
+import { MIRROR_OF_ERISED_QUESTION, MIRROR_OF_ERISED_RUN } from "./mirror-of-erised";
+import { PHILOSOPHERS_STONE_QUESTION, PHILOSOPHERS_STONE_RUN } from "./philosophers-stone";
+import { resolveRunEvidence } from "../presentation";
 
 export const MOCK_CORPUS: Corpus = {
   id: "harry-potter-archive",
@@ -13,9 +12,11 @@ export const MOCK_CORPUS: Corpus = {
   title: "The Chronicles of Hogwarts",
   subtitle: "Seven enchanted tomes of magical history",
   edition: "Archival Demonstration Edition",
-  source_kind: "ingested_edition",
+  source_kind: "original_companion_notes",
+  language: "en",
+  indexed: false,
   book_count: ARCHIVE_VOLUMES.length,
-  source_count: ARCHIVE_VOLUMES.reduce((acc, v) => acc + v.chunks, 0),
+  source_count: ARCHIVE_VOLUMES.reduce((n, volume) => n + volume.chunks, 0),
   examples: [
     {
       id: "marauder",
@@ -25,55 +26,134 @@ export const MOCK_CORPUS: Corpus = {
     {
       id: "mirror",
       label: "The Mirror of Erised",
-      question: "What does the Mirror of Erised reveal, and why is it dangerous?",
+      question: MIRROR_OF_ERISED_QUESTION,
     },
     {
       id: "stone",
       label: "The Philosopher's Stone",
-      question: "Why can Harry retrieve the Philosopher's Stone from the mirror?",
+      question: PHILOSOPHERS_STONE_QUESTION,
     },
   ],
 };
-
+const history = new Map<string, ArchiveRun>();
+let sequence = 0;
+function remember(run: ArchiveRun) {
+  history.set(run.id, run);
+  if (history.size > 20) history.delete(history.keys().next().value!);
+  return run;
+}
 export const mockArchiveAdapter = {
-  async getCorpus(): Promise<Corpus> {
+  async getCorpus() {
     return MOCK_CORPUS;
   },
-
   async getVolumes() {
     return ARCHIVE_VOLUMES;
   },
+  async createRun(
+    req: RunRequest,
+    selectedVolumes: string[] = ["vol-3"],
+  ): Promise<ArchiveRun> {
+    const id = "run-" + Date.now() + "-" + ++sequence;
+    const canonical = (question: string) =>
+      question.trim().toLowerCase().replace(/[?!.]/g, "");
 
-  async createRun(req: RunRequest, selectedVolumes: string[] = ["vol-3"]): Promise<ArchiveRun> {
-    const isMarauderQuestion =
-      req.question.toLowerCase().includes("marauder") ||
-      req.question.toLowerCase().includes("map") ||
-      req.question.toLowerCase().includes("created") ||
-      req.question.toLowerCase().includes("own") ||
-      req.question.trim().length <= 3;
+    const q = canonical(req.question);
+    const methods: ("rag" | "full_context")[] =
+      req.mode === "compare" ? ["rag", "full_context"] : [req.mode];
 
-    if (isMarauderQuestion) {
-      const branches =
-        req.mode === "rag"
-          ? [MARAUDERS_MAP_RUN.branches[0]]
-          : req.mode === "full_context"
-            ? [MARAUDERS_MAP_RUN.branches[1]]
-            : MARAUDERS_MAP_RUN.branches;
+    // Scenario selector
+    let baseRun: ArchiveRun | null = null;
+    let requiredVolume = "vol-3";
+    let volumeName = "The Prisoner of Azkaban";
+    let volumeNum = "Volume III";
 
-      return {
-        ...MARAUDERS_MAP_RUN,
-        id: `run-${Date.now()}`,
-        mode: req.mode,
-        question: req.question.trim() || MARAUDERS_MAP_QUESTION,
-        scopeVolumeIds: selectedVolumes.length > 0 ? selectedVolumes : ["vol-3"],
-        branches,
-      };
+    if (q === canonical(MARAUDERS_MAP_QUESTION)) {
+      baseRun = MARAUDERS_MAP_RUN;
+      requiredVolume = "vol-3";
+      volumeName = "The Prisoner of Azkaban";
+      volumeNum = "Volume III";
+    } else if (q === canonical(MIRROR_OF_ERISED_QUESTION)) {
+      baseRun = MIRROR_OF_ERISED_RUN;
+      requiredVolume = "vol-1";
+      volumeName = "The Philosopher's Stone";
+      volumeNum = "Volume I";
+    } else if (q === canonical(PHILOSOPHERS_STONE_QUESTION)) {
+      baseRun = PHILOSOPHERS_STONE_RUN;
+      requiredVolume = "vol-1";
+      volumeName = "The Philosopher's Stone";
+      volumeNum = "Volume I";
     }
 
-    // Unprepared question fallback
-    return {
+    if (baseRun && selectedVolumes.includes(requiredVolume)) {
+      return remember({
+        ...baseRun,
+        id,
+        mode: req.mode,
+        question: req.question.trim(),
+        is_preview: false,
+        data_mode: "mock",
+        created_at: new Date().toISOString(),
+        scopeVolumeIds: [requiredVolume],
+        branches: baseRun.branches
+          .filter((branch) => methods.includes(branch.method))
+          .map((branch) => ({
+            ...branch,
+            context: { ...branch.context, is_simulated: true },
+            claims: branch.claims.map((claim) => ({
+              ...claim,
+              citations: claim.citations.map((citation) => {
+                const source = baseRun!.sources.find(
+                  (item) => item.id === citation.source_id,
+                );
+                const start = source?.text.indexOf(citation.excerpt) ?? -1;
+                return start < 0
+                  ? citation
+                  : {
+                      ...citation,
+                      start_offset: start,
+                      end_offset: start + citation.excerpt.length,
+                    };
+              }),
+            })),
+          })),
+      });
+    }
+
+    const introduction = baseRun
+      ? `The prepared investigation belongs to ${volumeNum}. Select ${volumeName} to consult its evidence.`
+      : "This archive demonstration contains prepared investigations of the Marauder's Map, the Mirror of Erised, and the Philosopher's Stone. This question has no prepared answer.";
+
+    const branches: ArchiveBranch[] = methods.map((method) => ({
+      id: id + "-" + method,
+      method,
+      status: "complete",
+      answer_title: "Uncatalogued Inquiry",
+      introduction,
+      claims: [],
+      conclusion: baseRun
+        ? `Choose ${volumeName} from the collection proxies to explore the prepared investigation.`
+        : "Choose one of the catalogued suggestions to explore a prepared investigation.",
+      insufficient_evidence: true,
+      context: {
+        source_ids: [],
+        selected_source_count: 0,
+        supplied_source_count: 0,
+        strategy: method === "rag" ? "retrieved_passages" : "complete_scope",
+        is_simulated: true,
+      },
+      metrics: {
+        basis: "illustrative",
+        usage_status: "unknown",
+        latency_ms: null,
+        input_tokens: null,
+        output_tokens: null,
+        estimated_cost_usd: null,
+      },
+    }));
+
+    return remember({
       schema_version: "1.0",
-      id: `run-${Date.now()}`,
+      id,
       question: req.question,
       mode: req.mode,
       data_mode: "mock",
@@ -81,71 +161,20 @@ export const mockArchiveAdapter = {
       created_at: new Date().toISOString(),
       status: "complete",
       configuration: {
-        corpus_id: "harry-potter-archive",
-        corpus_version: "vol-3-poa",
-        scope_label: "Custom Query Scope",
-        model: "pensieve-dual-evaluator-v1",
+        corpus_id: req.corpus_id,
+        corpus_version: req.corpus_version,
+        scope_label: "Selected demonstration volumes",
+        model: "prepared-demonstration",
         prompt_version: "v2.4-strict-provenance",
         output_limit: 800,
       },
       scopeVolumeIds: selectedVolumes,
-      branches: [
-        {
-          id: `branch-unprepared-${Date.now()}`,
-          method: "rag",
-          status: "complete",
-          answer_title: "Uncatalogued Inquiry",
-          introduction:
-            "This demonstration archive holds fully catalogued retrieval evidence for the prepared Marauder's Map investigation.",
-          claims: [
-            {
-              id: "claim-unprep-1",
-              text: "To observe the real-time retrieval ceremony, twin tomes, and claim-to-evidence thread, please consult the prepared Marauder's Map inquiry.",
-              citations: [],
-            },
-          ],
-          conclusion: "Return to the prepared inquiry on the research desk.",
-          insufficient_evidence: true,
-          context: {
-            source_ids: [],
-            selected_source_count: 0,
-            supplied_source_count: 0,
-            strategy: "retrieved_passages",
-            is_simulated: true,
-          },
-          metrics: {
-            basis: "illustrative",
-            latency_ms: 320,
-            input_tokens: 42,
-            output_tokens: 45,
-            estimated_cost_usd: 0.00003,
-          },
-        },
-      ],
+      branches,
       sources: [],
-    };
+    });
   },
-
   getEvidence(runId: string, citationId: string): EvidenceResponse | null {
-    for (const branch of MARAUDERS_MAP_RUN.branches) {
-      for (const claim of branch.claims) {
-        for (const citation of claim.citations) {
-          if (citation.id === citationId) {
-            const source = MARAUDERS_MAP_SOURCES.find((s) => s.id === citation.source_id);
-            if (source) {
-              return {
-                schema_version: "1.0",
-                run_id: runId,
-                branch_id: branch.id,
-                claim,
-                citation,
-                source,
-              };
-            }
-          }
-        }
-      }
-    }
-    return null;
+    const run = history.get(runId);
+    return run ? resolveRunEvidence(run, citationId) : null;
   },
 };

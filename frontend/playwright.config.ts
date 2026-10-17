@@ -6,9 +6,10 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 30000,
+  expect: { timeout: 15000 },
   reporter: "list",
   use: {
-    baseURL: process.env.BASE_URL ?? "http://localhost:3000",
+    baseURL: process.env.BASE_URL ?? "http://127.0.0.1:3000",
     channel: "chrome",
     viewport: { width: 1440, height: 1000 },
     trace: "retain-on-failure",

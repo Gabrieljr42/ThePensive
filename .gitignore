@@ -1,5 +1,6 @@
 node_modules/
 .next/
+.next-backend-check/
 .venv/
 __pycache__/
 .pytest_cache/
@@ -12,5 +13,5 @@ test-results/
 playwright-report/
 *.tsbuildinfo
 data/private/
+harrypotter.pdf
 *.log
-

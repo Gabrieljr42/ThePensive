@@ -1,54 +1,45 @@
 "use client";
-
 import { useMemo, useRef } from "react";
-import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
+import * as THREE from "three";
+import { useArchiveStore } from "../store";
 import { sceneUniforms } from "../uniforms";
+import { basinPosition, basinScale } from "./PensieveBasin";
 
 export function PageBloom() {
-  const instancedRef = useRef<THREE.InstancedMesh | null>(null);
-  const count = 18;
-
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-
+  const run = useArchiveStore((s) => s.run);
+  const phase = useArchiveStore((s) => s.phase);
+  const ref = useRef<THREE.Mesh>(null);
+  const curve = useMemo(
+    () =>
+      new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-1.35, 1.05, 0.7),
+        new THREE.Vector3(-0.55, 1.9, 0.1),
+        new THREE.Vector3(0.35, 1.8, -0.25),
+        new THREE.Vector3(
+          basinPosition[0],
+          1.26 * basinScale[1],
+          basinPosition[2],
+        ),
+      ]),
+    [],
+  );
+  const full = run?.branches.find((branch) => branch.method === "full_context");
   useFrame(() => {
-    if (!instancedRef.current) return;
-    const bloom = sceneUniforms.retrieval.pageBloom;
-
-    for (let i = 0; i < count; i++) {
-      const angle = (i / (count - 1) - 0.5) * 1.1 * bloom;
-      const lift = Math.sin((i / (count - 1)) * Math.PI) * 0.16 * bloom;
-      const xSpread = (i / (count - 1) - 0.5) * 0.35 * bloom;
-
-      dummy.position.set(-0.7 + xSpread, 1.05 + lift, 2.15);
-      dummy.rotation.set(0, 0, angle);
-      dummy.scale.set(0.18, 0.28, 1);
-      dummy.updateMatrix();
-
-      instancedRef.current.setMatrixAt(i, dummy.matrix);
-    }
-    instancedRef.current.instanceMatrix.needsUpdate = true;
-
-    const mat = instancedRef.current.material as THREE.MeshBasicMaterial;
-    if (mat) {
-      mat.opacity = bloom * 0.38;
-    }
+    if (ref.current)
+      (ref.current.material as THREE.MeshBasicMaterial).opacity =
+        Math.max(0, sceneUniforms.basin.energy - 0.17) * 0.44;
   });
-
+  if (!full || full.context.supplied_source_count === 0) return null;
   return (
-    <instancedMesh
-      ref={instancedRef}
-      args={[undefined, undefined, count]}
-    >
-      <planeGeometry args={[1, 1]} />
+    <mesh ref={ref} visible={phase === "reading" || phase === "retrieving"}>
+      <tubeGeometry args={[curve, 36, 0.014, 4, false]} />
       <meshBasicMaterial
-        color="#c5e6f5"
+        color="#a7d4df"
         transparent
         opacity={0}
-        blending={THREE.AdditiveBlending}
-        side={THREE.DoubleSide}
         depthWrite={false}
       />
-    </instancedMesh>
+    </mesh>
   );
 }

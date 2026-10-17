@@ -57,6 +57,23 @@ CORPORA = [
             ),
         ],
     ),
+    Corpus(
+        id="harry-potter-archive",
+        version="vol-3-poa",
+        title="The Chronicles of Hogwarts",
+        subtitle="Seven enchanted tomes of magical history",
+        edition="Pensieve Archive · Third Volume Edition",
+        source_kind="ingested_edition",
+        book_count=7,
+        source_count=4,
+        examples=[
+            ExampleQuestion(
+                id="marauder",
+                label="The Marauder's Map",
+                question="How did Harry come to own the Marauder's Map, and who created it?",
+            ),
+        ],
+    ),
 ]
 
 
@@ -74,20 +91,24 @@ def passage(
     return SourcePassage(
         id=source_id,
         corpus_id=corpus_id,
-        corpus_version=CORPUS_VERSION,
+        corpus_version=corpus.version,
         book=book,
         book_short=short,
         edition=corpus.edition,
         chapter=chapter,
         chapter_number=number,
-        page_label=f"Demo folio {folio}",
+        page_label=f"Demo folio {folio}" if corpus_id != "harry-potter-archive" else folio,
         page_kind="demo_folio",
         text=text,
         attribution=(
-            "Original companion prose written for this demonstration; not an excerpt "
-            "or page reference from the novels."
-            if corpus_id == "wizarding-notes"
-            else "Original fiction written for the Pensieve demonstration."
+            "Original paraphrased demonstration passage · Volume III"
+            if corpus_id == "harry-potter-archive"
+            else (
+                "Original companion prose written for this demonstration; not an excerpt "
+                "or page reference from the novels."
+                if corpus_id == "wizarding-notes"
+                else "Original fiction written for the Pensieve demonstration."
+            )
         ),
     )
 
@@ -177,6 +198,67 @@ SOURCES = [
         "The keeper promises to preserve every leaf in its original order, to name the "
         "source of every answer, and to leave unsupported questions open. The archive "
         "values an honest silence more than a beautifully invented answer.",
+    ),
+    passage(
+        "harry-potter-archive",
+        "src-poa-ch10-gift",
+        "The Prisoner of Azkaban",
+        "Azkaban",
+        "The Marauder's Map",
+        10,
+        "192",
+        "Fred and George pulled Harry into an empty classroom before the Hogsmeade "
+        "excursion. They unfurled a square, worn parchment that appeared completely blank, "
+        "explaining that they had nicked it from Argus Filch's filing cabinet during their "
+        "first winter at the school. Touching their wand tip to the center, they whispered "
+        "the oath of mischief, causing delicate ink veins to spread across the sheet until "
+        "every tower, dungeon, and secret passage of the castle appeared, traced by tiny "
+        "moving labels indicating wandering persons.",
+    ),
+    passage(
+        "harry-potter-archive",
+        "src-poa-ch10-creators",
+        "The Prisoner of Azkaban",
+        "Azkaban",
+        "The Marauder's Map",
+        10,
+        "193",
+        "Across the header in ornate cursive flourished the title: Messrs Moony, Wormtail, "
+        "Padfoot, and Prongs, Purveyors of Aids to Magical Mischief-Makers, are proud to "
+        "present the Marauder's Map. George informed Harry that these four unidentified "
+        "scholars were noble pioneers who had mapped the school grounds in secret decades "
+        "earlier, and that the twins felt it their solemn obligation to pass such a legacy "
+        "directly to him.",
+    ),
+    passage(
+        "harry-potter-archive",
+        "src-poa-ch18-identities",
+        "The Prisoner of Azkaban",
+        "Azkaban",
+        "Moony, Wormtail, Padfoot, and Prongs",
+        18,
+        "355",
+        "Within the ruined chamber of the Shrieking Shack, Professor Remus Lupin revealed "
+        "the true identity of the four cartographers. He was Moony, so titled due to his "
+        "monthly lycanthropic torment. James Potter transformed into a great stag and earned "
+        "the name Prongs; Sirius Black became a massive black dog known as Padfoot; and "
+        "Peter Pettigrew assumed the shape of a rat called Wormtail. They mastered illicit "
+        "animagus transformations in their fifth year to wander the grounds freely under "
+        "moonlight and forged the map to record every boundary.",
+    ),
+    passage(
+        "harry-potter-archive",
+        "src-poa-ch22-return",
+        "The Prisoner of Azkaban",
+        "Azkaban",
+        "Owl Post Again",
+        22,
+        "423",
+        "Packing his trunks after tendering his resignation, Professor Lupin summoned Harry "
+        "into his vacated study. Along with the Invisibility Cloak, Lupin placed the blank "
+        "Marauder's Map back into Harry's hands. Lupin remarked that having surrendered his "
+        "post as instructor, he felt no lingering compunction against returning the "
+        "enchanted parchment created by Harry's father and his companions.",
     ),
 ]
 

@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description:
     "Ask the story. Follow the evidence. An enchanted research archive comparing RAG and Full Context.",
   robots: { index: false, follow: false },
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

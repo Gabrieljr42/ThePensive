@@ -62,3 +62,22 @@ export type ScenePhase =
   | "retrieving"
   | "reading"
   | "evidence";
+
+export type DivePhase =
+  | "idle"
+  | "offering"
+  | "approaching"
+  | "crossing"
+  | "within"
+  | "waiting"
+  | "arriving";
+export function hasReadableAnswer(run: ArchiveRun | null): boolean {
+  return Boolean(
+    run?.branches.some(
+      (branch) =>
+        branch.status === "complete" ||
+        branch.introduction ||
+        branch.claims.length,
+    ),
+  );
+}

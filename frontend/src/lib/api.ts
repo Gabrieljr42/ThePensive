@@ -5,6 +5,7 @@ import type {
   ExperimentRun,
   Mode,
   RunRequest,
+  RunEstimate,
 } from "./contracts";
 
 export class ArchiveError extends Error {
@@ -48,7 +49,7 @@ async function runRequest(
   options?: RequestInit,
 ): Promise<ExperimentRun> {
   const run = await request<ExperimentRun>(path, options);
-  if (run.schema_version !== "1.0")
+  if (!["1.0", "2.0"].includes(run.schema_version))
     throw new ArchiveError(
       "This archive version is not supported. Refresh and try again.",
       409,
@@ -57,6 +58,15 @@ async function runRequest(
 }
 
 export const archiveApi = {
+  status: (signal?: AbortSignal) => request<{
+    schema_version: "2.0";
+    live_enabled: boolean;
+    public_mode: boolean;
+    public_chapter_limit: number;
+    full_context_token_limit?: number;
+  }>("/status", { signal }),
+  estimate: (body: RunRequest, signal?: AbortSignal) =>
+    request<RunEstimate>("/runs/estimate", { method: "POST", body: JSON.stringify(body), signal }),
   corpora: (signal?: AbortSignal) => request<Corpus[]>("/corpora", { signal }),
   preview: (corpusId: string, mode: Mode, signal?: AbortSignal) =>
     runRequest(`/demo?corpus_id=${encodeURIComponent(corpusId)}&mode=${mode}`, {

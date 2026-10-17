@@ -1,167 +1,128 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { ArchiveMaterial } from "./ArchiveMaterial";
+import { useArchiveStore } from "../store";
+
+const colors = [
+  "#423026",
+  "#273340",
+  "#303c30",
+  "#5b392c",
+  "#393040",
+  "#595042",
+  "#272d34",
+];
 
 export function Stacks() {
-  const booksRef = useRef<THREE.InstancedMesh | null>(null);
-  const floorRef = useRef<THREE.MeshStandardMaterial | null>(null);
-
-  // Generate thousands of books on the shelves procedurally
-  const { bookMatrices, bookColors } = useMemo(() => {
-    const matrices: THREE.Matrix4[] = [];
-    const colors: THREE.Color[] = [];
-
+  const books = useRef<THREE.InstancedMesh>(null);
+  const lightMode = useArchiveStore((s) => s.lightMode);
+  const placements = useMemo(() => {
+    const entries: { matrix: THREE.Matrix4; color: THREE.Color }[] = [];
     const dummy = new THREE.Object3D();
-    const leatherPalettes = [
-      new THREE.Color("#2a1814"), // dark oxblood
-      new THREE.Color("#161a22"), // midnight slate
-      new THREE.Color("#1a261c"), // deep forest
-      new THREE.Color("#261c14"), // burnt umber
-      new THREE.Color("#1c1424"), // ancient purple
-      new THREE.Color("#10141a"), // charcoal black
-      new THREE.Color("#362512"), // warm calfskin
-    ];
-
-    // Left Stacks (Aisle Left)
-    const shelfRows = 6;
-    const shelfLevels = 5;
-    for (let r = 0; r < shelfRows; r++) {
-      const zPos = 1.0 + r * 1.4;
-      for (let l = 0; l < shelfLevels; l++) {
-        const yPos = 0.5 + l * 0.9;
-        const booksCount = 14;
-        for (let b = 0; b < booksCount; b++) {
-          const xPos = -2.6 - (b / booksCount) * 1.8;
-          const bookHeight = 0.55 + (Math.sin(b * 3.7 + l) * 0.5 + 0.5) * 0.18;
-          const bookWidth = 0.08 + (Math.cos(b * 2.1) * 0.5 + 0.5) * 0.05;
-          const bookDepth = 0.38;
-          const tilt = (b % 7 === 0) ? 0.06 : 0;
-
-          dummy.position.set(xPos, yPos + bookHeight / 2, zPos);
-          dummy.rotation.set(0, 0, tilt);
-          dummy.scale.set(bookWidth, bookHeight, bookDepth);
+    for (const side of [-1, 1]) {
+      for (let level = 0; level < (side === -1 ? 6 : 5); level++) {
+        for (let slot = 0; slot < 62; slot++) {
+          if (
+            (slot + level * 3) % 17 === 0 ||
+            (side === 1 && slot > 28 && slot < 33)
+          )
+            continue;
+          const h = 0.42 + ((slot * 7 + level * 3) % 9) * 0.028;
+          dummy.position.set(
+            side * 3.16,
+            0.28 + level * 0.78 + h / 2,
+            -4.3 + slot * 0.16,
+          );
+          dummy.rotation.set(
+            0,
+            side === -1 ? Math.PI / 2 : -Math.PI / 2,
+            slot % 13 === 0 ? 0.1 : 0,
+          );
+          dummy.scale.set(
+            0.105 + (slot % 4) * 0.009,
+            h,
+            0.29 + (slot % 3) * 0.022,
+          );
           dummy.updateMatrix();
-
-          matrices.push(dummy.matrix.clone());
-          colors.push(leatherPalettes[(b + l * 3 + r) % leatherPalettes.length]);
+          entries.push({
+            matrix: dummy.matrix.clone(),
+            color: new THREE.Color(colors[(slot + level * 2) % colors.length]),
+          });
         }
       }
     }
-
-    // Right Stacks (Aisle Right)
-    for (let r = 0; r < shelfRows; r++) {
-      const zPos = 1.0 + r * 1.4;
-      for (let l = 0; l < shelfLevels; l++) {
-        const yPos = 0.5 + l * 0.9;
-        const booksCount = 14;
-        for (let b = 0; b < booksCount; b++) {
-          const xPos = 2.6 + (b / booksCount) * 1.8;
-          const bookHeight = 0.55 + (Math.sin(b * 4.2 + l) * 0.5 + 0.5) * 0.18;
-          const bookWidth = 0.08 + (Math.cos(b * 1.9) * 0.5 + 0.5) * 0.05;
-          const bookDepth = 0.38;
-          const tilt = (b % 6 === 0) ? -0.06 : 0;
-
-          dummy.position.set(xPos, yPos + bookHeight / 2, zPos);
-          dummy.rotation.set(0, 0, tilt);
-          dummy.scale.set(bookWidth, bookHeight, bookDepth);
-          dummy.updateMatrix();
-
-          matrices.push(dummy.matrix.clone());
-          colors.push(leatherPalettes[(b * 2 + l + r) % leatherPalettes.length]);
-        }
-      }
-    }
-
-    // Distant Gallery Stacks (Backdrop)
-    for (let l = 0; l < 4; l++) {
-      const yPos = 1.2 + l * 1.1;
-      const count = 30;
-      for (let b = 0; b < count; b++) {
-        // Leave central opening for the great window (-2.2 to 2.2)
-        if (b > 11 && b < 19) continue;
-        const xPos = -4.5 + (b / count) * 9.0;
-        const zPos = -3.8;
-        const bookHeight = 0.7;
-        const bookWidth = 0.12;
-
-        dummy.position.set(xPos, yPos, zPos);
-        dummy.rotation.set(0, 0, 0);
-        dummy.scale.set(bookWidth, bookHeight, 0.4);
-        dummy.updateMatrix();
-
-        matrices.push(dummy.matrix.clone());
-        colors.push(leatherPalettes[(b + l) % leatherPalettes.length]);
-      }
-    }
-
-    return { bookMatrices: matrices, bookColors: colors };
+    return entries;
   }, []);
-
-  useFrame(() => {
-    if (!booksRef.current) return;
-    const mesh = booksRef.current;
-    if (mesh.count === 0) {
-      for (let i = 0; i < bookMatrices.length; i++) {
-        mesh.setMatrixAt(i, bookMatrices[i]);
-        mesh.setColorAt(i, bookColors[i]);
+  const joinery = useMemo(() => {
+    const pieces: THREE.BufferGeometry[] = [];
+    const box = (
+      x: number,
+      y: number,
+      z: number,
+      sx: number,
+      sy: number,
+      sz: number,
+    ) => {
+      pieces.push(new THREE.BoxGeometry(sx, sy, sz).translate(x, y, z));
+    };
+    for (const side of [-1, 1]) {
+      box(side * 3.51, 2.55, 0.55, 0.095, 5.1, 10.6);
+      for (let level = 0; level < 7; level++) {
+        box(side * 3.2, 0.23 + level * 0.78, 0.55, 0.7, 0.075, 10.7);
+        box(side * 2.85, 0.225 + level * 0.78, 0.55, 0.042, 0.11, 10.7);
       }
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      for (const z of [-4.65, -1.22, 2.22, 5.65])
+        box(side * 3.2, 2.58, z, 0.73, 5.2, 0.095);
+      box(side * 3.15, 0.11, 0.55, 0.82, 0.2, 10.8);
+      box(side * 3.15, 5.01, 0.55, 0.82, 0.17, 10.8);
     }
-  });
-
+    const merged = mergeGeometries(pieces)!;
+    pieces.forEach((piece) => piece.dispose());
+    return merged;
+  }, []);
+  useLayoutEffect(() => {
+    const mesh = books.current;
+    if (!mesh) return;
+    placements.forEach((item, index) => {
+      mesh.setMatrixAt(index, item.matrix);
+      mesh.setColorAt(index, item.color);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }, [placements, lightMode]);
   return (
     <group>
-      {/* Dark Flagstone Archive Floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[24, 30]} />
-        <meshStandardMaterial
-          ref={floorRef}
-          color="#06090e"
-          roughness={0.65}
-          metalness={0.25}
+        <ArchiveMaterial role="slate" repeat={[12, 16]} color="#444b54" />
+      </mesh>
+      <mesh geometry={joinery} receiveShadow>
+        <ArchiveMaterial
+          role="walnut"
+          color="#543a2c"
+          repeat={[2, 2]}
+          roughness={0.72}
         />
       </mesh>
-
-      {/* Instanced Books on Towering Shelves */}
       <instancedMesh
-        ref={booksRef}
-        args={[undefined, undefined, bookMatrices.length]}
-        castShadow
+        ref={books}
+        args={[undefined, undefined, placements.length]}
         receiveShadow
       >
         <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial roughness={0.7} metalness={0.15} />
+        <ArchiveMaterial role="leather" color="#ffffff" />
       </instancedMesh>
-
-      {/* Shelving Framework Left */}
-      <mesh position={[-3.6, 2.5, 4.5]} castShadow receiveShadow>
-        <boxGeometry args={[1.6, 5.2, 8]} />
-        <meshStandardMaterial color="#0b0e14" roughness={0.85} />
+      <mesh position={[0, 0.012, 1.3]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[4.65, 3.25]} />
+        <ArchiveMaterial role="leather" color="#47372f" repeat={[6, 6]} />
       </mesh>
-
-      {/* Shelving Framework Right */}
-      <mesh position={[3.6, 2.5, 4.5]} castShadow receiveShadow>
-        <boxGeometry args={[1.6, 5.2, 8]} />
-        <meshStandardMaterial color="#0b0e14" roughness={0.85} />
-      </mesh>
-
-      {/* Foreground Grand Arch Pillars */}
-      <mesh position={[-2.4, 3.2, 6.2]} castShadow>
-        <cylinderGeometry args={[0.3, 0.36, 6.5, 12]} />
-        <meshStandardMaterial color="#070a0f" roughness={0.9} />
-      </mesh>
-      <mesh position={[2.4, 3.2, 6.2]} castShadow>
-        <cylinderGeometry args={[0.3, 0.36, 6.5, 12]} />
-        <meshStandardMaterial color="#070a0f" roughness={0.9} />
-      </mesh>
-
-      {/* Back Wall / Arch Gallery */}
-      <mesh position={[0, 3.5, -4.2]}>
-        <boxGeometry args={[14, 7.5, 0.4]} />
-        <meshStandardMaterial color="#05080c" roughness={0.95} />
+      <mesh position={[0, 0.014, 1.3]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[4.42, 3.02]} />
+        <ArchiveMaterial role="leather" color="#302c30" repeat={[6, 6]} />
       </mesh>
     </group>
   );
