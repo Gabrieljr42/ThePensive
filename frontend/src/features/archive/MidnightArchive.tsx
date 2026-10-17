@@ -87,10 +87,9 @@ export function MidnightArchive({
         );
         configureInquiryTransport(createHttpInquiryTransport());
       } else if (!abort.signal.aborted) {
-        useArchiveStore.getState().setAvailability(
-          "unavailable",
-          "The live archive is reachable, but no indexed PDF corpus with sources is available.",
-        );
+        useArchiveStore.getState().setAvailability("demo");
+        const { demoInquiryTransport } = await import("./inquiry/transport");
+        configureInquiryTransport(demoInquiryTransport);
       }
     }).catch(() => {
       if (!abort.signal.aborted) {
