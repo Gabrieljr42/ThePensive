@@ -4,7 +4,7 @@
 
 Creative recommendation: **The Midnight Archive** — a candlelit library opening onto a celestial observatory. Two illuminated tomes make the comparison visible; a thread of light connects an answer claim to its source passage.
 
-Status: **the archive has a live Gemini backend and a separate demonstration mode.** Gemini 3.1 Flash-Lite generates answers; Embedding 2 and pgvector retrieve passages. Factual answers receive a second review against the supplied sources before publication. The local private corpus contains the complete first three books, with 738 indexed chunks. The browser preserves the selected books and chapters and opens exact source passages from persisted runs.
+Status: **the archive has a live Gemini backend and a separate demonstration mode.** Gemini 3.8 Flash generates answers; Embedding 2 and pgvector retrieve passages. Factual answers receive a second review against the supplied sources before publication. The local private corpus contains the complete first three books, with 738 indexed chunks. The browser preserves the selected books and chapters and opens exact source passages from persisted runs.
 
 ## Enter the archive
 
@@ -18,7 +18,23 @@ Open [the cinematic entrance](http://localhost:3000), [the reading desk](http://
 
 The Compose stack contains Next.js, FastAPI, and PostgreSQL with pgvector. The database uses a named volume. Stop the services with `docker compose down`; the database volume is retained.
 
+> **Instant Demo (No Docker/API key required):** You can also run the 3D client standalone with full offline mock archives:
+> ```sh
+> cd frontend
+> npm install
+> npm run dev
+> ```
+> Then open [http://localhost:3000](http://localhost:3000).
+
 ## Current experience
+
+| Threshold & Entrance | Reading Room Desk |
+| :---: | :---: |
+| ![Entrance](docs/screenshots/entrance-desktop.png) | ![Reading Room Desk](docs/screenshots/ask-desktop.png) |
+
+| Memory Chamber Descent | Source Chamber & Evidence |
+| :---: | :---: |
+| ![Memory Chamber Descent](docs/screenshots/descent-interior-desktop.png) | ![Source Chamber](docs/screenshots/evidence-desktop.png) |
 
 The threshold reveals the archive and offers an immediate path to the desk. Select an illuminated book, write a question on the manuscript, and choose RAG, Full Context, or Compare. Ask the Archive sends a thread into the basin and carries the camera through its silver surface into a memory interior. The first available method releases its reading tome while the other continues. A citation opens its source passage. Skip the animation to keep waiting at the desk, or cancel the inquiry separately.
 
@@ -102,9 +118,16 @@ The working product name is **Pensieve**; **The Midnight Archive** is its visual
 
 - A solo-developer portfolio project with a modest public demo audience.
 - Next.js, TypeScript, Tailwind, and Motion own the interface; FastAPI/Python own source, experiment, and AI responsibilities; PostgreSQL with pgvector is the backend data boundary.
-- Live generation is pinned to Gemini 3.1 Flash-Lite and indexing to Gemini Embedding 2. Availability and quota depend on the configured Google project.
+- Live generation is pinned to Gemini 3.8 Flash and indexing to Gemini Embedding 2. Availability and quota depend on the configured Google project.
 - The supplied PDF is private. Source pages identify that PDF, rather than claiming a printed edition's pagination. Only the first three complete books are authorized for live processing in the current local corpus.
 - Small original fixtures support the separate functional demonstration.
 - Live runs and recorded demonstrations will carry explicit labels; benchmark conclusions will come from measured experiments.
 
 Planning date: **5 October 2026**.
+
+## License & Disclaimer
+
+This project is licensed under the [MIT License](LICENSE).
+
+> **Disclaimer:** This is a non-commercial educational and portfolio project. "Harry Potter" and related elements are trademarks of and © Warner Bros. Entertainment Inc. and J.K. Rowling.
+
