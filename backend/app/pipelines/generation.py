@@ -3,6 +3,7 @@
 import json
 import math
 import re
+import time
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Literal, Protocol
@@ -179,7 +180,7 @@ def citation_options(block: dict) -> list[dict]:
     while position < len(words):
         start = words[position].start()
         end = position + 1
-        while end < len(words) and words[end].end() - start <= 160:
+        while end < len(words) and words[end].end() - start <= 280:
             end += 1
         finish = words[end - 1].end()
         absolute_start = block["start_offset"] + start
@@ -275,8 +276,13 @@ class GeminiProvider:
             raise ValueError(
                 "Configure a verified pricing/capability record before changing models."
             )
-        if settings.embedding_model != "gemini-embedding-2":
-            raise ValueError("Changing embedding models requires a new corpus version.")
+        if (
+            getattr(settings, "full_context_model", None)
+            and settings.full_context_model not in ("gemini-3.1-flash-lite", "gemini-3.8-flash")
+        ):
+            raise ValueError(
+                "Configure a verified pricing/capability record before changing models."
+            )
         self.settings = settings
         self.counter = httpx.Client(timeout=15)
         self.client = genai.Client(
@@ -288,10 +294,11 @@ class GeminiProvider:
             ),
         )
 
-    def config(self, prompt: str | None = None):
+    def config(self, prompt: str | None = None, model: str | None = None):
+        target_model = model or self.settings.model
         reviewing = bool(prompt and _is_review_prompt(prompt))
         schema = review_schema(prompt) if reviewing else answer_schema(prompt)
-        primary_thinking = "low" if self.settings.model == "gemini-3.8-flash" else "minimal"
+        primary_thinking = "low" if target_model == "gemini-3.8-flash" else "minimal"
         return types.GenerateContentConfig(
             system_instruction=REVIEW_SYSTEM if reviewing else SYSTEM,
             response_mime_type="application/json",
@@ -304,19 +311,22 @@ class GeminiProvider:
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
 
-    def count(self, prompt: str) -> int:
-        primary_thinking = "LOW" if self.settings.model == "gemini-3.8-flash" else "MINIMAL"
-        return self._count(prompt, SYSTEM, primary_thinking)
+    def count(self, prompt: str, model: str | None = None) -> int:
+        target_model = model or self.settings.model
+        primary_thinking = "LOW" if target_model == "gemini-3.8-flash" else "MINIMAL"
+        return self._count(prompt, SYSTEM, primary_thinking, model=target_model)
 
-    def count_review(self, prompt: str) -> int:
-        return self._count(prompt, REVIEW_SYSTEM, "MEDIUM")
+    def count_review(self, prompt: str, model: str | None = None) -> int:
+        target_model = model or self.settings.model
+        return self._count(prompt, REVIEW_SYSTEM, "MEDIUM", model=target_model)
 
-    def _count(self, prompt: str, system_instruction: str, thinking_level: str) -> int:
-        # The Developer SDK rejects system/config fields for count_tokens. REST supports
-        # generateContentRequest, so preflight can count the complete generation request.
+    def _count(
+        self, prompt: str, system_instruction: str, thinking_level: str, model: str | None = None
+    ) -> int:
+        target_model = model or self.settings.model
         schema = review_schema(prompt) if _is_review_prompt(prompt) else answer_schema(prompt)
         request = {
-            "model": f"models/{self.settings.model}",
+            "model": f"models/{target_model}",
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "systemInstruction": {"parts": [{"text": system_instruction}]},
             "generationConfig": {
@@ -327,16 +337,24 @@ class GeminiProvider:
                 "thinkingConfig": {"thinkingLevel": thinking_level},
             },
         }
-        response = self.counter.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{self.settings.model}:countTokens",
-            headers={"x-goog-api-key": self.settings.gemini_api_key},
-            json={"generateContentRequest": request},
-        )
-        response.raise_for_status()
-        count = response.json().get("totalTokens")
-        if not isinstance(count, int) or count < 0:
-            raise ValueError("The provider did not return a token count.")
-        return count
+        delays = [1, 3]
+        for attempt in range(len(delays) + 1):
+            try:
+                response = self.counter.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{target_model}:countTokens",
+                    headers={"x-goog-api-key": self.settings.gemini_api_key},
+                    json={"generateContentRequest": request},
+                )
+                response.raise_for_status()
+                count = response.json().get("totalTokens")
+                if not isinstance(count, int) or count < 0:
+                    raise ValueError("The provider did not return a token count.")
+                return count
+            except httpx.HTTPStatusError as error:
+                if error.response.status_code in (429, 503) and attempt < len(delays):
+                    time.sleep(delays[attempt])
+                    continue
+                raise
 
     def embed(self, text: str, *, query=False, title="none") -> list[float]:
         prepared = (
@@ -363,26 +381,38 @@ class GeminiProvider:
             raise ValueError("The embedding vector is invalid.")
         return values
 
-    def generate(self, prompt: str) -> GenerationReceipt:
-        response = self.client.models.generate_content(
-            model=self.settings.model,
-            contents=prompt,
-            config=self.config(prompt),
-        )
-        return GenerationReceipt(
-            text=response.text or "",
-            usage=response.usage_metadata.model_dump() if response.usage_metadata else {},
-            model_version=response.model_version,
-            request_id=response.response_id,
-            finish_reason=(
-                response.candidates[0].finish_reason.value
-                if response.candidates and response.candidates[0].finish_reason
-                else ""
-            ),
-        )
+    def generate(self, prompt: str, model: str | None = None) -> GenerationReceipt:
+        target_model = model or self.settings.model
+        delays = [1, 3]
+        for attempt in range(len(delays) + 1):
+            try:
+                response = self.client.models.generate_content(
+                    model=target_model,
+                    contents=prompt,
+                    config=self.config(prompt, model=target_model),
+                )
+                return GenerationReceipt(
+                    text=response.text or "",
+                    usage=response.usage_metadata.model_dump() if response.usage_metadata else {},
+                    model_version=response.model_version,
+                    request_id=response.response_id,
+                    finish_reason=(
+                        response.candidates[0].finish_reason.value
+                        if response.candidates and response.candidates[0].finish_reason
+                        else ""
+                    ),
+                )
+            except Exception as error:
+                code = getattr(error, "code", None) or getattr(
+                    getattr(error, "response", None), "status_code", None
+                )
+                if code in (429, 503) and attempt < len(delays):
+                    time.sleep(delays[attempt])
+                    continue
+                raise
 
-    def review(self, prompt: str) -> GenerationReceipt:
-        return self.generate(prompt)
+    def review(self, prompt: str, model: str | None = None) -> GenerationReceipt:
+        return self.generate(prompt, model=model)
 
     def embed_documents(self, documents: list[tuple[str, str]]) -> list[list[float]]:
         if not documents or len(documents) > 16:
@@ -435,7 +465,10 @@ def prompt_for(question: str, blocks: list[dict]) -> str:
             sequence += 1
         sources.append(
             {
-                **{key: value for key, value in block.items() if key != "text"},
+                "source_id": block["source_id"],
+                "book": block.get("book"),
+                "chapter": block.get("chapter"),
+                "pdf_page": block.get("pdf_page"),
                 "citation_options": options,
             }
         )

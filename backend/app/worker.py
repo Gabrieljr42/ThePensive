@@ -79,7 +79,16 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
             units = repository.units(request, run.configuration.chapter_ids)
             blocks, spans = full_context(units)
         prompt = prompt_for(request.question, blocks)
-        input_tokens = provider.count(prompt)
+        is_full = branch.method == Method.FULL_CONTEXT
+        branch_model = (
+            settings.full_context_model
+            if is_full and getattr(settings, "full_context_model", None)
+            else settings.model
+        )
+        try:
+            input_tokens = provider.count(prompt, model=branch_model)
+        except TypeError:
+            input_tokens = provider.count(prompt)
         with repository.db.connection() as connection:
             reserved = (
                 connection.execute(
@@ -88,7 +97,7 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
                 ).fetchone()["reserved_microusd"]
                 / 1_000_000
             )
-        primary_max = maximum_generation_cost(input_tokens, settings.output_limit, settings.model)
+        primary_max = maximum_generation_cost(input_tokens, settings.output_limit, branch_model)
         review_max = maximum_generation_cost(
             REVIEW_INPUT_TOKEN_LIMIT, settings.output_limit, settings.model
         )
@@ -117,7 +126,10 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
         paid_started = True
         active_call = "primary"
         generation_started = time.monotonic()
-        primary_receipt = provider.generate(prompt)
+        try:
+            primary_receipt = provider.generate(prompt, model=branch_model)
+        except TypeError:
+            primary_receipt = provider.generate(prompt)
         stages["generation"] = int((time.monotonic() - generation_started) * 1000)
         receipt_metadata = {
             "prompt_version": PROMPT_VERSION,
@@ -128,7 +140,7 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
         )
         branch.status = BranchStatus.VALIDATING
         if not repository.update_branch(task["id"], branch, elapsed=elapsed()):
-            primary_cost = generation_cost(primary_receipt.usage, settings.model)
+            primary_cost = generation_cost(primary_receipt.usage, branch_model)
             repository.settle(
                 task["id"],
                 primary_cost + embedding_cost if primary_cost is not None else None,
@@ -155,7 +167,7 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
             review_tokens = provider.count_review(review_prompt)
             if review_tokens > REVIEW_INPUT_TOKEN_LIMIT:
                 raise ValueError("The source review exceeds its reserved token limit.")
-            primary_cost = generation_cost(primary_receipt.usage, settings.model)
+            primary_cost = generation_cost(primary_receipt.usage, branch_model)
             primary_guard = primary_cost if primary_cost is not None else primary_max
             if (
                 primary_guard
@@ -165,7 +177,7 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
             ):
                 raise ValueError("The source review exceeds its reserved context/cost limit.")
             if not repository.start_call(task["id"]):
-                primary_cost = generation_cost(primary_receipt.usage, settings.model)
+                primary_cost = generation_cost(primary_receipt.usage, branch_model)
                 repository.settle(
                     task["id"],
                     primary_cost + embedding_cost if primary_cost is not None else None,
@@ -227,9 +239,11 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
             branch.claims = []
 
         costs = [
-            generation_cost(item.usage, settings.model)
-            for item in (primary_receipt, review_receipt)
-            if item is not None
+            generation_cost(
+                receipt.usage, branch_model if receipt is primary_receipt else settings.model
+            )
+            for receipt in (primary_receipt, review_receipt)
+            if receipt is not None
         ]
         total_cost = (
             sum(costs) + embedding_cost if all(cost is not None for cost in costs) else None
@@ -261,7 +275,7 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
             cached_input_tokens=sum_usage("cached_content_token_count"),
             thinking_tokens=sum_usage("thoughts_token_count"),
             estimated_cost_usd=total_cost,
-            pricing_label=pricing_version_for(settings.model),
+            pricing_label=pricing_version_for(branch_model),
             model_version=(review_receipt or primary_receipt).model_version,
             provider_request_id=(review_receipt or primary_receipt).request_id,
             stage_ms=stages,
@@ -300,7 +314,7 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
             type(error).__name__,
         )
         primary_cost = (
-            generation_cost(primary_receipt.usage, settings.model)
+            generation_cost(primary_receipt.usage, branch_model)
             if primary_receipt
             else None
         )

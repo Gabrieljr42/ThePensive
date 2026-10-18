@@ -27,13 +27,19 @@ interface ArchiveState {
   availability: "checking" | "live" | "demo" | "unavailable";
   availabilityError: string | null;
   fullContextTokenLimit: number;
+  publicChapterLimit: number;
   setAvailability: (
     availability: ArchiveState["availability"],
     message?: string | null,
   ) => void;
   selectedChapterIds: string[];
   setSelectedChapters: (ids: string[]) => void;
-  loadCorpus: (corpus: Corpus, publicMode: boolean, fullContextTokenLimit?: number) => void;
+  loadCorpus: (
+    corpus: Corpus,
+    publicMode: boolean,
+    fullContextTokenLimit?: number,
+    publicChapterLimit?: number,
+  ) => void;
   phase: ScenePhase;
   volumes: Volume[];
   selectedVolumeIds: string[];
@@ -100,6 +106,7 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
   availability: "checking",
   availabilityError: null,
   fullContextTokenLimit: 0,
+  publicChapterLimit: 30,
   setAvailability: (availability, availabilityError = null) =>
     set(availability === "demo"
       ? {
@@ -108,6 +115,7 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
           corpus: null,
           publicMode: false,
           fullContextTokenLimit: 0,
+          publicChapterLimit: 30,
           selectedChapterIds: [],
           selectedVolumeIds: ["vol-3"],
           volumes: ARCHIVE_VOLUMES,
@@ -123,13 +131,14 @@ export const useArchiveStore = create<ArchiveState>((set) => ({
         )
       : selectedChapterIds,
   })),
-  loadCorpus: (corpus, publicMode, fullContextTokenLimit = 0) => set((state) => {
+  loadCorpus: (corpus, publicMode, fullContextTokenLimit = 0, publicChapterLimit = 30) => set((state) => {
     const books = corpus.books ?? [];
     const first = books.find((book) => bookIsAvailable(corpus, book.id, state.mode));
     return {
       corpus,
       publicMode,
       fullContextTokenLimit,
+      publicChapterLimit,
       availability: "live",
       availabilityError: null,
       selectedVolumeIds: first ? [first.id] : [],

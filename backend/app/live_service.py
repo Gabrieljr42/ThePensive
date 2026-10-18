@@ -49,15 +49,23 @@ class LiveService:
             units = self.repository.units(request, chapters)
             blocks, _ = full_context(units)
             prompt = prompt_for(request.question, blocks)
-            basis = "gemini_count_tokens" if self.provider else "utf8_byte_upper_bound"
+            branch_model = (
+                self.settings.full_context_model
+                if self.settings.full_context_model
+                else self.settings.model
+            )
+            fallback_len = len(
+                (prompt + SYSTEM + str(ProposedAnswer.model_json_schema())).encode("utf-8")
+            )
             try:
-                full_tokens = (
-                    self.provider.count(prompt)
-                    if self.provider
-                    else len(
-                        (prompt + SYSTEM + str(ProposedAnswer.model_json_schema())).encode("utf-8")
+                try:
+                    full_tokens = (
+                        self.provider.count(prompt, model=branch_model)
+                        if self.provider
+                        else fallback_len
                     )
-                )
+                except TypeError:
+                    full_tokens = self.provider.count(prompt) if self.provider else fallback_len
             except Exception as error:
                 raise ArchiveProblem(
                     "provider_unavailable", "Token preflight is unavailable.", 503
@@ -103,11 +111,19 @@ class LiveService:
                     len(chapters) > self.settings.public_chapter_limit
                     or tokens > self.settings.public_context_tokens
                 ):
+                    limit_ch = self.settings.public_chapter_limit
+                    limit_tok = self.settings.public_context_tokens
                     reason = (
-                        "Public comparisons accept up to three chapters and 30,000 input tokens."
+                        f"Public comparisons accept up to {limit_ch} chapters "
+                        f"and {limit_tok:,} input tokens."
                     )
+            branch_model = (
+                self.settings.full_context_model
+                if method == Method.FULL_CONTEXT and self.settings.full_context_model
+                else self.settings.model
+            )
             cost = maximum_generation_cost(
-                tokens, self.settings.output_limit, self.settings.model
+                tokens, self.settings.output_limit, branch_model
             ) + maximum_generation_cost(
                 REVIEW_INPUT_TOKEN_LIMIT, self.settings.output_limit, self.settings.model
             )

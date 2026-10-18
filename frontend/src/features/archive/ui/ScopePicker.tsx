@@ -13,6 +13,7 @@ export function ScopePicker() {
   const mode = useArchiveStore((state) => state.mode);
   const setMode = useArchiveStore((state) => state.setMode);
   const fullContextTokenLimit = useArchiveStore((state) => state.fullContextTokenLimit);
+  const publicChapterLimit = useArchiveStore((state) => state.publicChapterLimit);
   if (!corpus) return null;
   const chapters = (corpus.books ?? []).filter((book) => selectedBooks.includes(book.id))
     .flatMap((book) => availableChapters(corpus, book.id, mode)
@@ -24,7 +25,9 @@ export function ScopePicker() {
   const allRagChapters = (corpus.books ?? [])
     .filter((book) => selectedBooks.includes(book.id))
     .flatMap((book) => availableChapters(corpus, book.id, "rag").map((chapter) => chapter.id));
+  const allBookChapters = chapters.map((chapter) => chapter.id);
   const firstThreeChapters = chapters.slice(0, 3).map((chapter) => chapter.id);
+  const chapterCap = publicChapterLimit > 0 ? publicChapterLimit : 30;
   return (
     <details className="mt-4 rounded border border-[#8a671d]/25 p-3 text-[#3b3226]">
       <summary className="cursor-pointer font-reading text-sm">
@@ -34,9 +37,14 @@ export function ScopePicker() {
         {selected.length
           ? "Both methods consult the checked chapters. Catalogue questions keep this selection and may need a wider scope."
           : "Select one or more chapters before asking; an empty selection never expands to the whole corpus."}{" "}
-        {limited ? "Public comparisons accept up to three chapters." : "The server checks capacity and cost before each inquiry."}
+        {limited ? `Public inquiries accept up to ${chapterCap} chapters and a full book.` : "The server checks capacity and cost before each inquiry."}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" disabled={busy || !allBookChapters.length}
+          className="rounded border border-[#8a671d]/30 px-2 py-1 text-xs hover:bg-[#ddcfb3]/60 disabled:opacity-50"
+          onClick={() => setSelected(allBookChapters)}>
+          Select entire book
+        </button>
         <button type="button" disabled={busy || !allRagChapters.length}
           className="rounded border border-[#8a671d]/30 px-2 py-1 text-xs hover:bg-[#ddcfb3]/60 disabled:opacity-50"
           onClick={() => { setMode("rag"); setSelected(allRagChapters); }}>
@@ -63,7 +71,7 @@ export function ScopePicker() {
         {chapters.map((chapter) => (
           <label key={chapter.id} className="flex min-h-8 items-center gap-2 text-xs">
             <input type="checkbox" checked={selected.includes(chapter.id)}
-              disabled={busy || (limited && selected.length >= 3 && !selected.includes(chapter.id))}
+              disabled={busy || (limited && selected.length >= chapterCap && !selected.includes(chapter.id))}
               onChange={(event) => setSelected(event.target.checked
                 ? [...selected, chapter.id] : selected.filter((id) => id !== chapter.id))} />
             <span>{chapter.bookTitle} · {chapter.number}. {chapter.title} · PDF {chapter.page_start}–{chapter.page_end}</span>

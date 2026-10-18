@@ -84,6 +84,7 @@ export function MidnightArchive({
           corpus,
           status.public_mode,
           status.full_context_token_limit ?? 0,
+          status.public_chapter_limit ?? 30,
         );
         configureInquiryTransport(createHttpInquiryTransport());
       } else if (!abort.signal.aborted) {
