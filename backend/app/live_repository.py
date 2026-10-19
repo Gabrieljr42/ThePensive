@@ -298,8 +298,11 @@ class LiveRepository:
             raise ArchiveProblem(
                 "budget_exhausted", "The archive's monthly API budget is used.", 429
             )
-        if public and self.budget_used(connection, month, day) + amount > microdollars(
-            self.settings.public_daily_budget_usd
+        if (
+            public
+            and self.settings.public_daily_budget_usd > 0
+            and self.budget_used(connection, month, day) + amount
+            > microdollars(self.settings.public_daily_budget_usd)
         ):
             raise ArchiveProblem("daily_budget_exhausted", "Today's API budget is used.", 429)
         return month, day
@@ -418,13 +421,14 @@ class LiveRepository:
                 return ExperimentRun.model_validate(existing["payload"])
             if self.settings.public_mode:
                 _, day = periods()
-                count = connection.execute(
-                    "SELECT count(*) AS count FROM live_runs WHERE (owner_id=%s OR ip_hash=%s) "
-                    "AND (created_at AT TIME ZONE 'America/Sao_Paulo')::date=%s::date",
-                    (owner, ip_hash, day),
-                ).fetchone()["count"]
-                if count >= self.settings.public_daily_queries:
-                    raise ArchiveProblem("query_quota", "Your daily query allowance is used.", 429)
+                if self.settings.public_daily_queries > 0:
+                    count = connection.execute(
+                        "SELECT count(*) AS count FROM live_runs WHERE (owner_id=%s OR ip_hash=%s) "
+                        "AND (created_at AT TIME ZONE 'America/Sao_Paulo')::date=%s::date",
+                        (owner, ip_hash, day),
+                    ).fetchone()["count"]
+                    if count >= self.settings.public_daily_queries:
+                        raise ArchiveProblem("query_quota", "Your daily query allowance is used.", 429)
                 active = connection.execute(
                     "SELECT 1 FROM live_runs WHERE (owner_id=%s OR ip_hash=%s) "
                     "AND payload->>'status'='running'",

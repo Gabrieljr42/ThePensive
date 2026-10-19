@@ -1112,6 +1112,40 @@ def test_public_access_requires_proxy_and_enforces_visitor_quota(repo):
         assert second.status_code == 429
 
 
+def test_public_daily_query_quota_zero_allows_multiple_inquiries(repo):
+    class TinyCountProvider(FixtureProvider):
+        def count(self, prompt):
+            return 1
+
+    repo.settings = replace(
+        repo.settings,
+        public_mode=True,
+        proxy_key="proxy-secret",
+        session_secret="session-secret",
+        public_daily_queries=0,
+    )
+    app = create_app(
+        MemoryRunRepository(),
+        settings=repo.settings,
+        live_repository=repo,
+        provider=TinyCountProvider(),
+    )
+    with TestClient(app, base_url="https://archive.test") as client:
+        client.headers.update(
+            {"x-pensieve-proxy-key": "proxy-secret", "x-pensieve-client-ip": "192.0.2.1"}
+        )
+        body1 = request().model_copy(update={"mode": Mode.FULL_CONTEXT, "idempotency_key": "k1"})
+        first = client.post("/api/runs", json=body1.model_dump())
+        assert first.status_code == 201
+        task = repo.claim_task("test-worker")
+        repo.settle(task["id"], 0.001, {"status": "success", "basis": "utf8_byte_upper_bound"})
+        with repo.db.connection() as conn:
+            conn.execute("UPDATE live_runs SET payload=jsonb_set(payload, '{status}', '\"completed\"')")
+        body2 = request().model_copy(update={"mode": Mode.FULL_CONTEXT, "idempotency_key": "k2"})
+        second = client.post("/api/runs", json=body2.model_dump())
+        assert second.status_code == 201
+
+
 def test_public_review_reservation_is_rejected_by_unchanged_default_query_cap(repo):
     settings = replace(repo.settings, public_mode=True, public_run_budget_usd=0.03)
     assert settings.public_run_budget_usd == 0.03

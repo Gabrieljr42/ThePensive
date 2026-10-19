@@ -35,11 +35,11 @@ class Settings:
     embedding_model: str = "gemini-embedding-2"
     embedding_dimensions: int = 768
     output_limit: int = 2048
-    monthly_budget_usd: float = 5.0
-    public_daily_budget_usd: float = 0.60
+    monthly_budget_usd: float = 50.0
+    public_daily_budget_usd: float = 0.0
     public_run_budget_usd: float = 0.25
     local_run_budget_usd: float = 0.50
-    public_daily_queries: int = 3
+    public_daily_queries: int = 0
     public_context_tokens: int = 240000
     public_chapter_limit: int = 30
     full_context_token_limit: int = 240000
@@ -52,7 +52,7 @@ class Settings:
         model = os.getenv("GEMINI_MODEL", cls.model)
         full_context_model = os.getenv("GEMINI_FULL_CONTEXT_MODEL", cls.full_context_model)
         is_38 = model == "gemini-3.8-flash"
-        default_daily = "0.60" if is_38 else "0.15"
+        default_daily = "0.0"
         default_run = "0.25" if is_38 else "0.03"
         default_local = "0.50" if is_38 else "0.25"
         return cls(
@@ -65,7 +65,7 @@ class Settings:
             model=model,
             full_context_model=full_context_model,
             embedding_model=os.getenv("GEMINI_EMBEDDING_MODEL", cls.embedding_model),
-            monthly_budget_usd=float(os.getenv("PENSIEVE_MONTHLY_BUDGET_USD", "5")),
+            monthly_budget_usd=float(os.getenv("PENSIEVE_MONTHLY_BUDGET_USD", "50")),
             public_daily_budget_usd=float(
                 os.getenv("PENSIEVE_PUBLIC_DAILY_BUDGET_USD", default_daily)
             ),
@@ -75,6 +75,7 @@ class Settings:
             local_run_budget_usd=float(
                 os.getenv("PENSIEVE_LOCAL_RUN_BUDGET_USD", default_local)
             ),
+            public_daily_queries=int(os.getenv("PENSIEVE_PUBLIC_DAILY_QUERIES", "0")),
             public_context_tokens=int(os.getenv("PENSIEVE_PUBLIC_CONTEXT_TOKENS", "240000")),
             public_chapter_limit=int(os.getenv("PENSIEVE_PUBLIC_CHAPTER_LIMIT", "30")),
             full_context_token_limit=int(os.getenv("PENSIEVE_FULL_CONTEXT_TOKEN_LIMIT", "240000")),
