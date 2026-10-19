@@ -152,10 +152,21 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
             )
             settled = True
             return
+        def _extract_json(raw: str) -> str:
+            raw = (raw or "").strip()
+            if raw.startswith("```"):
+                lines = raw.splitlines()
+                if lines and lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                raw = "\n".join(lines).strip()
+            return raw
+
         validation_started = time.monotonic()
         if primary_receipt.finish_reason != "STOP":
             raise ValueError("The provider did not complete a structured answer.")
-        answer = ProposedAnswer.model_validate_json(primary_receipt.text)
+        answer = ProposedAnswer.model_validate_json(_extract_json(primary_receipt.text))
         if any(
             citation.quote_id is None for claim in answer.claims for citation in claim.citations
         ):
@@ -200,18 +211,34 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
             )
             if review_receipt.finish_reason != "STOP":
                 raise ValueError("The source review did not complete a structured answer.")
-            review_result = ProposedReview.model_validate_json(review_receipt.text)
+            review_result = ProposedReview.model_validate_json(_extract_json(review_receipt.text))
             indexes = [item.claim_index for item in review_result.claim_reviews]
+            if set(indexes) == {i + 1 for i in allowed_by_claim}:
+                for item in review_result.claim_reviews:
+                    item.claim_index -= 1
+                indexes = [item.claim_index for item in review_result.claim_reviews]
             if len(indexes) != len(set(indexes)) or set(indexes) != set(allowed_by_claim):
                 raise ValueError("The source review omitted or duplicated a claim index.")
             proposals = []
             for item in sorted(review_result.claim_reviews, key=lambda result: result.claim_index):
                 original_claim = answer.claims[item.claim_index]
-                if item.action == "retain" and item.text != original_claim.text:
-                    raise ValueError("A retained claim must preserve its proposed wording.")
+                if item.action == "retain":
+                    # Retaining a claim preserves the original proposed wording
+                    cites = [
+                        citation for citation in item.citations
+                        if citation.quote_id in allowed_by_claim[item.claim_index]
+                    ] if item.citations else original_claim.citations
+                    if not cites:
+                        cites = [
+                            c for c in original_claim.citations
+                            if c.quote_id in allowed_by_claim[item.claim_index]
+                        ]
+                    proposals.append(ProposedClaim(
+                        text=original_claim.text,
+                        citations=[ProposedCitation(quote_id=c.quote_id) for c in cites],
+                    ))
+                    continue
                 if item.action == "drop":
-                    if item.text or item.citations:
-                        raise ValueError("A dropped claim must not contain text or citations.")
                     continue
                 if not item.text or not item.citations:
                     raise ValueError("A retained or revised claim requires text and citations.")
@@ -224,7 +251,7 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
                                for citation in item.citations],
                 ))
             reviewed = ProposedAnswer(
-                answer_title=review_result.answer_title,
+                answer_title=review_result.answer_title or answer.answer_title,
                 insufficient_evidence=not proposals,
                 claims=proposals,
             )
@@ -307,11 +334,12 @@ def process_task(repository: LiveRepository, settings: Settings, provider, task:
             getattr(error, "response", None), "status_code", None
         )
         logger.error(
-            "branch_failed run=%s task=%s method=%s error_type=%s",
+            "branch_failed run=%s task=%s method=%s error=%s",
             run.id,
             task["id"],
             branch.method,
-            type(error).__name__,
+            error,
+            exc_info=True,
         )
         primary_cost = (
             generation_cost(primary_receipt.usage, branch_model)

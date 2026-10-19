@@ -52,6 +52,7 @@ export function MidnightArchive({
   const reduced = useArchiveStore((s) => s.reducedMotion);
   const divePhase = useArchiveStore((s) => s.divePhase);
   const busy = useArchiveStore((s) => s.isBusy);
+  const availability = useArchiveStore((s) => s.availability);
   const diving = divePhase !== "idle" && divePhase !== "arriving";
   const [sceneReady, setSceneReady] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
@@ -269,7 +270,9 @@ export function MidnightArchive({
             <div className="inquiry-column">
               <div className="inquiry-heading">
                 <MethodAstrolabe />
-                <span className="demo-label">Prepared demonstration</span>
+                <span className="demo-label">
+                  {availability === "live" ? "Live archive" : "Prepared demonstration"}
+                </span>
               </div>
               <QuestionLeaf />
             </div>
